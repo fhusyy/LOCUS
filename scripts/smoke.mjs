@@ -57,6 +57,21 @@ try {
   await mobilePage.screenshot({ path: `${output}/06-compare-mobile.png`, fullPage: false });
   await mobile.close();
 
+  const mobileJourney = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+  const mobileJourneyPage = await mobileJourney.newPage();
+  await mobileJourneyPage.goto(baseUrl, { waitUntil: "networkidle" });
+  await mobileJourneyPage.getByRole("button", { name: /Построить мой маршрут/ }).click();
+  await mobileJourneyPage.getByRole("button", { name: /Продолжить/ }).click();
+  await mobileJourneyPage.getByRole("button", { name: /Cybersecurity/ }).click();
+  await mobileJourneyPage.getByRole("button", { name: /Продолжить/ }).click();
+  await mobileJourneyPage.getByRole("button", { name: /Продолжить/ }).click();
+  await mobileJourneyPage.getByText("Бюджет на обучение в год").waitFor();
+  expect(await mobileJourneyPage.getByText("Шаг 4 из 5").isVisible(), "Счётчик шага скрыт на mobile");
+  const mobileJourneyOverflow = await mobileJourneyPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(mobileJourneyOverflow <= 1, `Горизонтальный overflow анкеты на mobile: ${mobileJourneyOverflow}px`);
+  await mobileJourneyPage.screenshot({ path: `${output}/07-budget-mobile.png`, fullPage: false });
+  await mobileJourney.close();
+
   const journey = await browser.newContext({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
   const journeyPage = await journey.newPage();
   await journeyPage.goto(baseUrl, { waitUntil: "networkidle" });
@@ -69,6 +84,17 @@ try {
   await journeyPage.getByLabel(/Пробный или итоговый ЕНТ/).fill("96");
   await journeyPage.getByRole("button", { name: /Продолжить/ }).click();
   await journeyPage.getByRole("button", { name: /до 1.5 млн/ }).click();
+  const budgetGrid = journeyPage.locator(".budget-grid");
+  const budgetBadge = journeyPage.locator(".budget-option.has-badge small");
+  const [gridBox, badgeBox, footerButtonBox] = await Promise.all([
+    budgetGrid.boundingBox(),
+    budgetBadge.boundingBox(),
+    journeyPage.locator(".wizard-footer .button.primary").boundingBox(),
+  ]);
+  expect(Boolean(gridBox && badgeBox && badgeBox.y >= gridBox.y && badgeBox.y + badgeBox.height <= gridBox.y + gridBox.height), "Бейдж бюджета обрезан");
+  expect(Boolean(footerButtonBox && footerButtonBox.height <= 54), "Кнопка в подвале перенеслась на две строки на desktop");
+  await journeyPage.getByText("Шаг 4 из 5").waitFor();
+  await journeyPage.screenshot({ path: `${output}/08-budget-desktop.png`, fullPage: false });
   await journeyPage.getByRole("button", { name: /Продолжить/ }).click();
   await journeyPage.getByRole("button", { name: /Найти мои программы/ }).click();
   await journeyPage.getByText("Cybersecurity", { exact: true }).first().waitFor();
