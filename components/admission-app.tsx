@@ -1,49 +1,270 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { buildRoadmap, formatMoney, matchPrograms, profileReadiness } from "@/lib/matching";
-import type { City, Interest, Match, RoadmapTask, StudentProfile } from "@/lib/types";
+import React, { useEffect, useMemo, useState } from "react";
+import { buildRoadmap, formatMoney, matchPrograms, profileReadiness, categorizeProgram } from "@/lib/matching";
+import type {
+  City,
+  Interest,
+  Match,
+  Program,
+  RoadmapTask,
+  StudentProfile,
+  ShortlistItem,
+  ApplicationItem,
+  ApplicationStage,
+  UntCombination,
+  CareerFocus,
+} from "@/lib/types";
+import { programs } from "@/lib/programs";
+import { loadLocalState, saveLocalState, syncToCloud, supabase } from "@/lib/supabase";
 
-type Screen = "landing" | "onboarding" | "results" | "compare" | "roadmap";
+import { ScoreRing } from "@/components/ui/score-ring";
+import { ConfidenceBadge, CategoryBadge } from "@/components/ui/confidence-badge";
+import {
+  Chevron,
+  CheckIcon,
+  SparkIcon,
+  BookmarkIcon,
+  SearchIcon,
+  SlidersIcon,
+  ExternalLinkIcon,
+  MapPinIcon,
+  FilterIcon,
+} from "@/components/ui/icons";
 
-const interestLabels: Record<Interest, { title: string; description: string; icon: string }> = {
-  "computer-science": { title: "Computer Science", description: "Алгоритмы, системы и широкий IT-фундамент", icon: "⌘" },
-  "data-science": { title: "Data Science & AI", description: "Данные, машинное обучение и математика", icon: "◫" },
-  "software-engineering": { title: "Software Engineering", description: "Разработка продуктов и командная инженерия", icon: "</>" },
-  cybersecurity: { title: "Cybersecurity", description: "Защита систем, сетей и информации", icon: "◇" },
+import { UniversityModal } from "@/components/screens/university-modal";
+import { WhatIfView } from "@/components/screens/what-if-view";
+import { ExploreView } from "@/components/screens/explore-view";
+import { ShortlistView } from "@/components/screens/shortlist-view";
+import { DashboardView } from "@/components/screens/dashboard-view";
+import { LandingPage } from "@/components/landing-page";
+
+export type Screen =
+  | "landing"
+  | "onboarding"
+  | "dashboard"
+  | "results"
+  | "explore"
+  | "compare"
+  | "shortlist"
+  | "roadmap"
+  | "what-if";
+
+export type InterestCategory =
+  | "it-ai"
+  | "business-finance"
+  | "engineering"
+  | "medicine-health"
+  | "law-social"
+  | "design-creative"
+  | "natural-sciences"
+  | "languages-pedagogy";
+
+export const interestCategories: { id: "all" | InterestCategory; label: string; icon: string }[] = [
+  { id: "all", label: "Все направления", icon: "✨" },
+  { id: "it-ai", label: "IT & ИИ", icon: "💻" },
+  { id: "business-finance", label: "Бизнес & Финансы", icon: "📊" },
+  { id: "engineering", label: "Инженерия", icon: "⚙" },
+  { id: "medicine-health", label: "Медицина", icon: "🩺" },
+  { id: "law-social", label: "Право & Дипломатия", icon: "⚖" },
+  { id: "design-creative", label: "Дизайн & Медиа", icon: "🎨" },
+  { id: "natural-sciences", label: "Естественные науки", icon: "🔬" },
+  { id: "languages-pedagogy", label: "Языки & Педагогика", icon: "🌍" },
+];
+
+export const interestLabels: Record<
+  Interest,
+  { title: string; description: string; icon: string; category: InterestCategory }
+> = {
+  // IT & AI
+  "computer-science": { title: "Computer Science", description: "Фундаментальные алгоритмы, структуры данных и ОС", icon: "⌘", category: "it-ai" },
+  "software-engineering": { title: "Software Engineering", description: "Разработка продуктов, архитектура и веб-сервисы", icon: "</>", category: "it-ai" },
+  "data-science": { title: "Data Science & AI", description: "Машинное обучение, нейросети, Big Data и прикладная математика", icon: "◫", category: "it-ai" },
+  cybersecurity: { title: "Cybersecurity & InfoSec", description: "Защита сетей, этичный хакинг, безопасность инфраструктуры", icon: "◇", category: "it-ai" },
+  "ai-robotics": { title: "AI & Robotics", description: "Робототехника, встраиваемые системы, сенсоры и компьютерное зрение", icon: "⚙", category: "it-ai" },
+  "cloud-devops": { title: "Cloud & DevOps", description: "Kubernetes, CI/CD, облачные кластеры и системная надежность", icon: "☁", category: "it-ai" },
+  "information-systems": { title: "Information Systems", description: "Информационные системы, базы данных и цифровизация бизнеса", icon: "🏢", category: "it-ai" },
+
+  // Business & Finance
+  "finance-fintech": { title: "Финансы & Финтех", description: "Инвестиционный банкинг, финтех-продукты, казначейство и крипто", icon: "💳", category: "business-finance" },
+  fintech: { title: "Финтех & Банкинг", description: "Платёжные системы, смарт-контракты и необанкинг", icon: "💳", category: "business-finance" },
+  "business-mgmt": { title: "Международный бизнес & Менеджмент", description: "Управление компаниями, предпринимательство и стратегия", icon: "📈", category: "business-finance" },
+  "marketing-digital": { title: "Digital Маркетинг & Продажи", description: "Продуктовый маркетинг, аналитика воронок и перформанс", icon: "🎯", category: "business-finance" },
+  economics: { title: "Экономика & Аналитика", description: "Макроэкономика, эконометрика, финансовые рынки и аудит", icon: "📉", category: "business-finance" },
+
+  // Engineering & Tech
+  "engineering-tech": { title: "Общая инженерия & Технологии", description: "Промышленное проектирование, материаловедение и производство", icon: "🛠", category: "engineering" },
+  "petroleum-mining": { title: "Нефтегазовое дело & Геология", description: "Бурение, разработка месторождений, энергетика и недра", icon: "🛢", category: "engineering" },
+  "robotics-mechatronics": { title: "Мехатроника & Робототехника", description: "Автоматизация линий, манипуляторы, дроны и сенсорика", icon: "🤖", category: "engineering" },
+  "architecture-civil": { title: "Архитектура & Строительство", description: "BIM-проектирование, градостроительство, урбанистика и конструкции", icon: "🏛", category: "engineering" },
+
+  // Medicine & Healthcare
+  "medicine-general": { title: "Общая медицина & Хирургия", description: "Лечебное дело, диагностика, клиническая практика и хирургия", icon: "🩺", category: "medicine-health" },
+  "biomedicine-pharma": { title: "Фармация & Биомедицина", description: "Разработка фармпрепаратов, клинические исследования и биотехнологии", icon: "💊", category: "medicine-health" },
+  dentistry: { title: "Стоматология & Челюстная хирургия", description: "Терапевтическая, ортопедическая и хирургическая стоматология", icon: "🦷", category: "medicine-health" },
+
+  // Law & Social Sciences
+  "law-jurisprudence": { title: "Юриспруденция & Международное право", description: "Корпоративное право, судебные процессы, арбитраж и M&A", icon: "⚖", category: "law-social" },
+  "international-relations": { title: "Международные отношения & Дипломатия", description: "Геополитика, внешняя политика, международные организации и МИД", icon: "🌐", category: "law-social" },
+  "psychology-hr": { title: "Психология & Организационный HR", description: "Консультирование, оценка персонала, коучинг и поведенческий анализ", icon: "🧠", category: "law-social" },
+
+  // Design, Media & Creative
+  "ui-ux-product": { title: "UI/UX & Product Design", description: "Дизайн интерфейсов, пользовательский опыт и дизайн-системы", icon: "🎨", category: "design-creative" },
+  gamedev: { title: "Game Development & 3D", description: "Разработка игр на Unreal Engine/Unity, шейдеры и геймдизайн", icon: "🎮", category: "design-creative" },
+  "design-multimedia": { title: "Графический дизайн & Мультимедиа", description: "Брендинг, моушн-дизайн, визуальные коммуникации и типографика", icon: "🖌", category: "design-creative" },
+  "journalism-media": { title: "Медиа, Журналистика & PR", description: "Цифровой медиаконтент, подкасты, связи с общественностью и блогинг", icon: "🎙", category: "design-creative" },
+
+  // Natural Sciences & Math
+  "applied-math": { title: "Прикладная математика & Статистика", description: "Математическое моделирование, криптография и алгоритмы", icon: "📐", category: "natural-sciences" },
+  "biotech-chemistry": { title: "Биотехнологии & Химические технологии", description: "Генетическая инженерия, лабораторный синтез и экотехнологии", icon: "🧪", category: "natural-sciences" },
+
+  // Languages & Education
+  "linguistics-translation": { title: "Переводческое дело & Лингвистика", description: "Синхронный перевод, иностранные языки и межкультурная коммуникация", icon: "🗣", category: "languages-pedagogy" },
+  pedagogy: { title: "Педагогика & Образовательные технологии", description: "STEM-образование, методика преподавания и EdTech продукты", icon: "📚", category: "languages-pedagogy" },
 };
 
+export const kazakhstanHometowns = [
+  "Астана",
+  "Алматы",
+  "Шымкент",
+  "Караганда",
+  "Актобе",
+  "Тараз",
+  "Павлодар",
+  "Усть-Каменогорск",
+  "Семей",
+  "Атырау",
+  "Костанай",
+  "Кызылорда",
+  "Уральск",
+  "Петропавловск",
+  "Актау",
+  "Темиртау",
+  "Туркестан",
+  "Кокшетау",
+  "Талдыкорган",
+  "Экибастуз",
+  "Рудный",
+  "Жезказган",
+  "Каскелен",
+];
+
+export const untCombinationsList: UntCombination[] = [
+  "Математика + Информатика",
+  "Математика + Физика",
+  "Математика + География",
+  "Биология + Химия",
+  "Иностранный язык + Всемирная история",
+  "Всемирная история + Основы права",
+  "Творческий экзамен",
+  "Ещё не определился",
+];
+
+export const careerFocusesList: CareerFocus[] = [
+  "Big Tech & Релокейт",
+  "Стартапы & Предпринимательство",
+  "Финтех & Банки (Kaspi/Halyk)",
+  "Наука & R&D (ИИ лаборатории)",
+  "Кибербезопасность & SOC",
+  "Медицина & Здравоохранение",
+  "Юриспруденция & Международное право",
+  "Геймдев & Креатив",
+  "Корпоративный сектор & Big 4",
+  "Удалёнка на США/Европу",
+  "Неважно",
+];
+
 const defaultProfile: StudentProfile = {
-  name: "",
+  name: "Алия",
   grade: "11",
   homeCity: "Шымкент",
   enrollmentYear: 2027,
+  interests: ["data-science", "computer-science"],
   interest: "data-science",
-  favoriteSubjects: ["Математика", "Информатика"],
-  gpa: 4.4,
+  untCombination: "Математика + Информатика",
+  favoriteSubjects: ["Математика", "Информатика", "Английский язык"],
+  gpa: 3.85, // 4.0 scale
   unt: 108,
-  ielts: 6,
+  ielts: 6.0,
   preferredCities: ["Астана", "Алматы"],
+  preferredCountries: ["Казахстан"],
   budget: 2_500_000,
+  onlyGrant: false,
   scholarshipImportant: true,
-  language: "Английский",
-  careerFocus: "Практика",
+  language: "Казахский / русский",
+  careerFocus: "Big Tech & Релокейт",
+  dormitoryNeeded: true,
+  militaryDepartment: false,
 };
 
-const wizardSteps = ["О тебе", "Направление", "Академика", "Предпочтения", "Проверка"];
-const subjects = ["Математика", "Информатика", "Физика", "Английский язык", "Экономика"];
-const cities: City[] = ["Астана", "Алматы", "Каскелен", "Любой город"];
+const demoProfiles: Record<string, StudentProfile> = {
+  aliya: defaultProfile,
+  sanzhar: {
+    name: "Санжар",
+    grade: "11",
+    homeCity: "Алматы",
+    enrollmentYear: 2027,
+    interests: ["cybersecurity", "software-engineering"],
+    interest: "cybersecurity",
+    untCombination: "Математика + Информатика",
+    favoriteSubjects: ["Информатика", "Физика"],
+    gpa: 3.65,
+    unt: 92,
+    ielts: 5.5,
+    preferredCities: ["Алматы", "Каскелен"],
+    budget: 1_600_000,
+    onlyGrant: true,
+    scholarshipImportant: true,
+    language: "Казахский / русский",
+    careerFocus: "Кибербезопасность & SOC",
+    dormitoryNeeded: true,
+  },
+  damir: {
+    name: "Дамир",
+    grade: "10",
+    homeCity: "Астана",
+    enrollmentYear: 2028,
+    interests: ["software-engineering", "robotics-mechatronics"],
+    interest: "software-engineering",
+    untCombination: "Математика + Физика",
+    favoriteSubjects: ["Математика", "Информатика", "Английский язык"],
+    gpa: 3.95,
+    unt: undefined,
+    ielts: undefined,
+    preferredCities: ["Астана", "Алматы"],
+    budget: 3_500_000,
+    onlyGrant: false,
+    scholarshipImportant: false,
+    language: "Английский",
+    careerFocus: "Стартапы & Astana Hub",
+    dormitoryNeeded: false,
+  },
+};
 
-type SavedState = { profile?: StudentProfile; targetId?: string; completed?: string[] };
-
-function readSavedState(): SavedState {
-  if (typeof window === "undefined") return {};
-  try {
-    return JSON.parse(window.localStorage.getItem("uniflow-state") ?? "{}") as SavedState;
-  } catch {
-    return {};
-  }
-}
+const wizardSteps = ["О тебе", "Направления & ЕНТ", "Академика (GPA 4.0)", "Бюджет и критерии", "Проверка"];
+const subjects = [
+  "Математика",
+  "Информатика",
+  "Физика",
+  "Английский язык",
+  "Биология",
+  "Химия",
+  "Всемирная история",
+  "География",
+  "Экономика",
+  "Обществознание / Право",
+  "Литература / Языки",
+  "Рисунок / Графика",
+];
+const studyCities: City[] = [
+  "Астана",
+  "Алматы",
+  "Каскелен",
+  "Караганда",
+  "Шымкент",
+  "Актобе",
+  "Любой город Казахстана",
+];
 
 function diversified(matches: Match[], count = 4) {
   const result: Match[] = [];
@@ -58,329 +279,1774 @@ function diversified(matches: Match[], count = 4) {
   return result;
 }
 
-function Chevron({ direction = "right" }: { direction?: "right" | "left" | "down" }) {
-  const rotate = direction === "left" ? "180" : direction === "down" ? "90" : "0";
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true" style={{ transform: `rotate(${rotate}deg)` }}>
-      <path d="M6.75 3.75 12 9l-5.25 5.25" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="m3.25 8.25 3 3 6.5-6.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function SparkIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-      <path d="M9 1.75c.35 3.9 2.35 5.9 6.25 6.25C11.35 8.35 9.35 10.35 9 14.25 8.65 10.35 6.65 8.35 2.75 8 6.65 7.65 8.65 5.65 9 1.75Z" stroke="currentColor" strokeWidth="1.4" />
-      <path d="M14.25 12.25c.15 1.35.9 2.1 2.25 2.25-1.35.15-2.1.9-2.25 2.25-.15-1.35-.9-2.1-2.25-2.25 1.35-.15 2.1-.9 2.25-2.25Z" fill="currentColor" />
-    </svg>
-  );
-}
-
 function Logo() {
   return (
-    <div className="brand" aria-label="Uniflow">
-      <span className="brand-mark"><span /></span>
-      <span>uniflow</span>
+    <div style={{ display: "flex", alignItems: "center", textDecoration: "none" }} aria-label="UniFlow">
+      <span style={{ fontSize: "24px", fontWeight: 900, color: "#040915", letterSpacing: "-0.5px" }}>
+        UniFlow<span style={{ color: "#FE7505" }}>.</span>
+      </span>
     </div>
   );
 }
 
-function AppHeader({ screen, onNavigate }: { screen: Screen; onNavigate: (screen: Screen) => void }) {
+export function AdmissionApp() {
+  const [mounted, setMounted] = useState(false);
+  const [screen, setScreen] = useState<Screen>("landing");
+  const [profile, setProfile] = useState<StudentProfile>(defaultProfile);
+  const [targetId, setTargetId] = useState<string>("aitu-big-data");
+  const [completed, setCompleted] = useState<string[]>(["shortlist"]);
+  const [shortlist, setShortlist] = useState<ShortlistItem[]>([
+    { programId: "aitu-big-data", category: "target", addedAt: new Date().toISOString() },
+    { programId: "kbtu-se", category: "reach", addedAt: new Date().toISOString() },
+    { programId: "iitu-is", category: "safety", addedAt: new Date().toISOString() },
+  ]);
+  const [applications, setApplications] = useState<ApplicationItem[]>([
+    { programId: "aitu-big-data", stage: "documents", updatedAt: new Date().toISOString(), completedTasks: [] },
+  ]);
+
+  const [notice, setNotice] = useState("");
+  const [cloudStatus, setCloudStatus] = useState<string>("Подключено к Supabase");
+  const [editingFrom, setEditingFrom] = useState<string>("");
+  const [modalProgramId, setModalProgramId] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Load from local/saved state on mount + listen to Supabase Auth state (e.g. Google OAuth redirect)
+  useEffect(() => {
+    setMounted(true);
+    const saved = loadLocalState();
+    if (saved.profile) setProfile(saved.profile);
+    if (saved.targetId) setTargetId(saved.targetId);
+    if (saved.completed) setCompleted(saved.completed);
+    if (saved.shortlist) setShortlist(saved.shortlist);
+    if (saved.applications) setApplications(saved.applications);
+
+    // Supabase auth state listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event: string, session: any) => {
+      if (session?.user) {
+        const u = session.user;
+        const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split("@")[0] || "Пользователь";
+        setProfile((prev) => ({
+          ...prev,
+          name: name.charAt(0).toUpperCase() + name.slice(1),
+        }));
+        setCloudStatus("Supabase Auth: Авторизован");
+      }
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
+  }, []);
+
+  // Save changes and sync to Supabase
+  useEffect(() => {
+    if (!mounted) return;
+    saveLocalState({ profile, targetId, completed, shortlist, applications });
+    syncToCloud({ profile, targetId, completed, shortlist, applications }).then((res) => {
+      setCloudStatus(res.message);
+    });
+  }, [mounted, profile, targetId, completed, shortlist, applications]);
+
+  // Matches calculation
+  const allMatches = useMemo(() => matchPrograms(profile), [profile]);
+  const topMatches = useMemo(() => diversified(allMatches, 4), [allMatches]);
+  const target = allMatches.find((item) => item.program.id === targetId) ?? topMatches[0] ?? allMatches[0];
+
+  const modalProgram = modalProgramId ? programs.find((p) => p.id === modalProgramId) : null;
+  const modalMatch = modalProgramId ? allMatches.find((m) => m.program.id === modalProgramId) : undefined;
+
+  const navigate = (next: Screen) => {
+    setScreen(next);
+    setMobileMenuOpen(false);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const handleToggleShortlist = (programId: string) => {
+    setShortlist((prev) => {
+      const exists = prev.some((item) => item.programId === programId);
+      if (exists) {
+        return prev.filter((item) => item.programId !== programId);
+      } else {
+        const match = allMatches.find((m) => m.program.id === programId);
+        const cat = match ? categorizeProgram(profile, match) : "target";
+        return [...prev, { programId, category: cat, addedAt: new Date().toISOString() }];
+      }
+    });
+  };
+
+  const handleUpdateShortlistCategory = (programId: string, category: ShortlistItem["category"]) => {
+    setShortlist((prev) =>
+      prev.map((item) => (item.programId === programId ? { ...item, category } : item))
+    );
+  };
+
+  const handleUpdateApplicationStage = (programId: string, stage: ApplicationStage) => {
+    setApplications((prev) => {
+      const exists = prev.find((a) => a.programId === programId);
+      if (exists) {
+        return prev.map((a) => (a.programId === programId ? { ...a, stage, updatedAt: new Date().toISOString() } : a));
+      } else {
+        return [...prev, { programId, stage, updatedAt: new Date().toISOString(), completedTasks: [] }];
+      }
+    });
+  };
+
+  const handleToggleCompleted = (id: string) => {
+    setCompleted((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id]
+    );
+  };
+
+  const editProfile = () => {
+    setEditingFrom(topMatches[0]?.program.id ?? "");
+    navigate("onboarding");
+  };
+
+  const completeProfile = () => {
+    const nextTop = diversified(matchPrograms(profile), 1)[0];
+    if (editingFrom) {
+      const previous = allMatches.find((item) => item.program.id === editingFrom)?.program.shortName;
+      setNotice(
+        previous && nextTop && previous !== nextTop.program.shortName
+          ? `Лидер изменился: ${previous} → ${nextTop.program.shortName}. Обновлены баллы и дорожная карта.`
+          : "Обновлены баллы совместимости, рекомендации и пошаговый маршрут."
+      );
+    }
+    setTargetId(nextTop?.program.id ?? targetId);
+    setEditingFrom("");
+    navigate("dashboard");
+  };
+
+  const loadDemo = (key: string = "aliya") => {
+    const selected = demoProfiles[key] ?? defaultProfile;
+    setProfile(selected);
+    const m = matchPrograms(selected);
+    setTargetId(m[0]?.program.id ?? "aitu-big-data");
+    setNotice(`Загружен демонстрационный профиль: ${selected.name} (${selected.interest})`);
+    navigate("dashboard");
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn("SignOut error:", e);
+    }
+    const emptyProfile: StudentProfile = { ...defaultProfile, name: "" };
+    setProfile(emptyProfile);
+    saveLocalState({ profile: emptyProfile, targetId: "aitu-big-data", completed: [], shortlist: [], applications: [] });
+    setNotice("Вы вышли из аккаунта");
+    navigate("landing");
+  };
+
   const inProduct = screen !== "landing" && screen !== "onboarding";
-  return (
-    <header className="topbar">
-      <button className="logo-button" onClick={() => onNavigate("landing")}><Logo /></button>
-      {inProduct ? (
-        <nav className="product-nav" aria-label="Разделы маршрута">
-          <button className={screen === "results" ? "active" : ""} onClick={() => onNavigate("results")}>Рекомендации</button>
-          <button className={screen === "compare" ? "active" : ""} onClick={() => onNavigate("compare")}>Сравнение</button>
-          <button className={screen === "roadmap" ? "active" : ""} onClick={() => onNavigate("roadmap")}>Маршрут</button>
-        </nav>
-      ) : <span className="header-caption">Персональный навигатор поступления</span>}
-      <div className="header-meta">
-        <span className="status-dot" />
-        Данные сохранены
-      </div>
-    </header>
-  );
-}
 
-function Landing({ onStart, onDemo }: { onStart: () => void; onDemo: () => void }) {
   return (
-    <main className="landing">
-      <section className="hero container">
-        <div className="hero-copy">
-          <div className="eyebrow"><SparkIcon /> Не список вузов. Твой маршрут.</div>
-          <h1>Поступление становится <em>понятным.</em></h1>
-          <p className="hero-lead">Расскажи о себе — Uniflow подберёт программы в Казахстане, объяснит каждую рекомендацию и соберёт план до подачи заявки.</p>
-          <div className="hero-actions">
-            <button className="button primary large" onClick={onStart}>Построить мой маршрут <Chevron /></button>
-            <button className="button ghost large" onClick={onDemo}>Посмотреть демо</button>
-          </div>
-          <div className="trust-row">
-            <span><CheckIcon /> Без регистрации</span>
-            <span><CheckIcon /> 4 минуты</span>
-            <span><CheckIcon /> Официальные источники</span>
-          </div>
-        </div>
-        <div className="hero-visual" aria-label="Пример персонального маршрута">
-          <div className="orbit orbit-one" />
-          <div className="orbit orbit-two" />
-          <div className="floating-note note-one"><span>01</span> Профиль</div>
-          <div className="floating-note note-two"><span>03</span> План действий</div>
-          <div className="match-preview">
-            <div className="preview-top">
-              <span className="mini-logo">A</span>
-              <div><small>Лучшее совпадение</small><strong>Astana IT University</strong></div>
-              <span className="score-orb">87</span>
+    <div className="app-shell">
+      {/* Top Navigation Bar (Active only in App Screens) */}
+      {screen !== "landing" && (
+        <header className="topbar">
+          <div className="topbar-inner container">
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <button className="logo-button" onClick={() => navigate("landing")}>
+                <Logo />
+              </button>
             </div>
-            <div className="preview-program">Big Data Analysis <span>6B06103</span></div>
-            <div className="preview-reasons">
-              <span><i className="ok"><CheckIcon /></i> Точно по интересу</span>
-              <span><i className="ok"><CheckIcon /></i> В рамках бюджета</span>
-              <span><i className="warn">!</i> Усилить результат ЕНТ</span>
-            </div>
-            <div className="preview-action"><span>Следующий шаг</span><strong>Составить план подготовки к ЕНТ</strong><Chevron /></div>
-          </div>
-        </div>
-      </section>
-      <section className="how-it-works">
-        <div className="container">
-          <p className="section-kicker">ОТ НЕОПРЕДЕЛЁННОСТИ — К ДЕЙСТВИЮ</p>
-          <div className="steps-grid">
-            <article><span>01</span><h3>Расскажи о себе</h3><p>Цель, оценки, экзамены, бюджет и предпочтения.</p></article>
-            <article><span>02</span><h3>Пойми свой выбор</h3><p>Сравни программы и увидь причины каждого мэтча.</p></article>
-            <article><span>03</span><h3>Двигайся по плану</h3><p>Получай следующий шаг и отмечай прогресс.</p></article>
-          </div>
-        </div>
-      </section>
-    </main>
-  );
-}
 
-function WizardProgress({ current }: { current: number }) {
-  return (
-    <div className="wizard-progress" aria-label={`Шаг ${current + 1} из ${wizardSteps.length}`}>
-      {wizardSteps.map((step, index) => (
-        <div className={`wizard-progress-item ${index < current ? "done" : ""} ${index === current ? "active" : ""}`} key={step}>
-          <span>{index < current ? <CheckIcon /> : index + 1}</span>
-          <b>{step}</b>
-          {index < wizardSteps.length - 1 && <i />}
-        </div>
-      ))}
+            {inProduct ? (
+              <nav className={`product-nav ${mobileMenuOpen ? "mobile-open" : ""}`} aria-label="Разделы навигатора">
+                <button className={screen === "dashboard" ? "active" : ""} onClick={() => navigate("dashboard")}>
+                  Обзор
+                </button>
+                <button className={screen === "results" ? "active" : ""} onClick={() => navigate("results")}>
+                  Рекомендации
+                </button>
+                <button className={screen === "explore" ? "active" : ""} onClick={() => navigate("explore")}>
+                  Каталог
+                </button>
+                <button className={screen === "compare" ? "active" : ""} onClick={() => navigate("compare")}>
+                  Сравнение
+                </button>
+                <button className={screen === "shortlist" ? "active" : ""} onClick={() => navigate("shortlist")}>
+                  Шорт-лист {shortlist.length > 0 && <span className="nav-badge">{shortlist.length}</span>}
+                </button>
+                <button className={screen === "roadmap" ? "active" : ""} onClick={() => navigate("roadmap")}>
+                  Маршрут
+                </button>
+                <button className={screen === "what-if" ? "active" : ""} onClick={() => navigate("what-if")}>
+                  ⚡ Что если?
+                </button>
+              </nav>
+            ) : (
+              <nav className={`landing-nav ${mobileMenuOpen ? "mobile-open" : ""}`} aria-label="Навигация">
+                <button className="navlink" onClick={() => navigate("explore")}>Каталог вузов</button>
+                <button className="navlink" onClick={() => navigate("what-if")}>Симулятор шансов</button>
+              </nav>
+            )}
+
+            <div className="header-meta">
+              {!inProduct ? (
+                <div className="landing-topbar-actions">
+                  <button className="btn nav-ghost" onClick={() => loadDemo("aliya")}>
+                    Демо-кабинет
+                  </button>
+                  <button
+                    className="btn btn-gradient nav-cta"
+                    onClick={() => {
+                      if (!profile.name) setProfile({ ...defaultProfile, name: "" });
+                      navigate(profile.name ? "dashboard" : "onboarding");
+                    }}
+                  >
+                    {profile.name ? "Мой кабинет" : "Подобрать вуз"}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <span className="status-dot online" />
+                  <span className="cloud-status-text" title="Supabase Cloud Realtime Sync">
+                    {cloudStatus}
+                  </span>
+                  <button className="button subtle small profile-pill-btn" onClick={editProfile}>
+                    {profile.name || "Профиль"}
+                  </button>
+                  <button
+                    className="button subtle small"
+                    onClick={handleLogout}
+                    style={{ fontSize: "12px", color: "#EF4444", padding: "4px 8px" }}
+                    title="Выйти из аккаунта"
+                  >
+                    Выйти
+                  </button>
+                </>
+              )}
+              <button
+                className="mobile-menu-toggle"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label="Меню"
+              >
+                ☰
+              </button>
+            </div>
+          </div>
+        </header>
+      )}
+
+      {/* Screen Views */}
+      {screen === "landing" && (
+        <LandingPage
+          profile={profile}
+          onLogout={handleLogout}
+          onStart={() => {
+            if (profile.name && profile.name.trim().length > 0) {
+              navigate("dashboard");
+            } else {
+              setProfile({ ...defaultProfile, name: "" });
+              navigate("onboarding");
+            }
+          }}
+          onNavigate={(s) => navigate(s as any)}
+          onDemo={(p) => loadDemo(p)}
+          onAuthSuccess={(authProfile) => {
+            const updated = { ...profile, ...authProfile };
+            setProfile(updated);
+            const m = matchPrograms(updated);
+            setTargetId(m[0]?.program.id ?? "aitu-big-data");
+            setNotice(`Вход выполнен: ${updated.name || "Пользователь"}`);
+            navigate("dashboard");
+          }}
+        />
+      )}
+
+      {screen === "onboarding" && (
+        <OnboardingScreen
+          profile={profile}
+          setProfile={setProfile}
+          onCancel={() => navigate(editingFrom ? "dashboard" : "landing")}
+          onComplete={completeProfile}
+        />
+      )}
+
+      {screen === "dashboard" && (
+        <DashboardView
+          profile={profile}
+          topMatches={topMatches}
+          targetMatch={target}
+          shortlist={shortlist}
+          completedTasks={completed}
+          onNavigate={navigate}
+          onToggleTask={handleToggleCompleted}
+          onViewProgram={(id) => setModalProgramId(id)}
+          onEditProfile={editProfile}
+        />
+      )}
+
+      {screen === "results" && (
+        <ResultsScreen
+          profile={profile}
+          matches={topMatches}
+          notice={notice}
+          shortlistIds={shortlist.map((s) => s.programId)}
+          onToggleShortlist={handleToggleShortlist}
+          onEdit={editProfile}
+          onCompare={() => navigate("compare")}
+          onRoadmap={() => navigate("roadmap")}
+          onTarget={(id) => {
+            setTargetId(id);
+            navigate("roadmap");
+          }}
+          onViewProgram={(id) => setModalProgramId(id)}
+          onOpenWhatIf={() => navigate("what-if")}
+        />
+      )}
+
+      {screen === "explore" && (
+        <ExploreView
+          matches={allMatches}
+          profile={profile}
+          shortlistIds={shortlist.map((s) => s.programId)}
+          onToggleShortlist={handleToggleShortlist}
+          onViewProgram={(id) => setModalProgramId(id)}
+          onCompareProgram={(id) => {
+            setTargetId(id);
+            navigate("compare");
+          }}
+        />
+      )}
+
+      {screen === "compare" && (
+        <CompareScreen
+          matches={allMatches}
+          profile={profile}
+          defaultLeftId={targetId}
+          onEdit={editProfile}
+          onRoadmap={() => navigate("roadmap")}
+          onTarget={(id) => {
+            setTargetId(id);
+            navigate("roadmap");
+          }}
+          onViewProgram={(id) => setModalProgramId(id)}
+        />
+      )}
+
+      {screen === "shortlist" && (
+        <ShortlistView
+          shortlist={shortlist}
+          applications={applications}
+          allMatches={allMatches}
+          profile={profile}
+          currentTargetId={targetId}
+          onRemoveShortlist={handleToggleShortlist}
+          onUpdateCategory={handleUpdateShortlistCategory}
+          onUpdateStage={handleUpdateApplicationStage}
+          onSetTarget={(id) => {
+            setTargetId(id);
+            navigate("roadmap");
+          }}
+          onViewProgram={(id) => setModalProgramId(id)}
+          onExploreMore={() => navigate("explore")}
+        />
+      )}
+
+      {screen === "roadmap" && target && (
+        <RoadmapScreen
+          profile={profile}
+          match={target}
+          completed={completed}
+          onToggle={handleToggleCompleted}
+          onEdit={editProfile}
+          onChangeTarget={() => navigate("results")}
+          onViewDetails={() => setModalProgramId(target.program.id)}
+        />
+      )}
+
+      {screen === "what-if" && (
+        <WhatIfView
+          profile={profile}
+          onApplyProfile={(updated) => {
+            setProfile(updated);
+            setNotice("Параметры из симулятора сохранены в основной профиль абитуриента!");
+            navigate("dashboard");
+          }}
+          onViewProgram={(id) => setModalProgramId(id)}
+        />
+      )}
+
+      {/* Deep-dive University Modal */}
+      {modalProgram && (
+        <UniversityModal
+          program={modalProgram}
+          match={modalMatch}
+          profile={profile}
+          isShortlisted={shortlist.some((s) => s.programId === modalProgram.id)}
+          isTarget={targetId === modalProgram.id}
+          onClose={() => setModalProgramId(null)}
+          onToggleShortlist={() => handleToggleShortlist(modalProgram.id)}
+          onSetTarget={() => {
+            setTargetId(modalProgram.id);
+            navigate("roadmap");
+          }}
+        />
+      )}
+
     </div>
   );
 }
 
-type WizardProps = {
+/* =========================================================================
+   ONBOARDING WIZARD WITH ENHANCED REAL-WORLD KZ LOGIC
+   ========================================================================= */
+
+function OnboardingScreen({
+  profile,
+  setProfile,
+  onCancel,
+  onComplete,
+}: {
   profile: StudentProfile;
-  setProfile: (profile: StudentProfile) => void;
-  initialStep?: number;
+  setProfile: (p: StudentProfile) => void;
   onCancel: () => void;
   onComplete: () => void;
-};
+}) {
+  const [step, setStep] = useState(0);
+  const [activeCategory, setActiveCategory] = useState<string>("all");
 
-function Onboarding({ profile, setProfile, initialStep = 0, onCancel, onComplete }: WizardProps) {
-  const [step, setStep] = useState(initialStep);
   const patch = (values: Partial<StudentProfile>) => setProfile({ ...profile, ...values });
-  const next = () => step < 4 ? setStep(step + 1) : onComplete();
-  const back = () => step > 0 ? setStep(step - 1) : onCancel();
+
+  const selectedInterests: Interest[] =
+    profile.interests && profile.interests.length > 0
+      ? profile.interests
+      : profile.interest
+      ? [profile.interest]
+      : [];
+
+  const toggleInterest = (key: Interest) => {
+    if (selectedInterests.includes(key)) {
+      if (selectedInterests.length > 1) {
+        const next = selectedInterests.filter((i) => i !== key);
+        patch({ interests: next, interest: next[0] });
+      }
+    } else {
+      if (selectedInterests.length < 3) {
+        const next = [...selectedInterests, key];
+        patch({ interests: next, interest: next[0] });
+      } else {
+        const next = [selectedInterests[0], selectedInterests[1], key];
+        patch({ interests: next, interest: next[0] });
+      }
+    }
+  };
+
+  // Intelligent grade-to-enrollment-year calculation
+  const handleGradeChange = (grade: StudentProfile["grade"]) => {
+    let year: StudentProfile["enrollmentYear"] = 2027;
+    if (grade === "9") year = 2029;
+    else if (grade === "10") year = 2028;
+    else if (grade === "11" || grade === "Выпускник школы" || grade === "Студент колледжа") year = 2027;
+
+    patch({ grade, enrollmentYear: year });
+  };
+
+  const next = () => (step < 4 ? setStep(step + 1) : onComplete());
+  const back = () => (step > 0 ? setStep(step - 1) : onCancel());
   const canContinue = step !== 0 || profile.homeCity.trim().length > 1;
 
   return (
     <main className="onboarding container">
-      <WizardProgress current={step} />
+      {/* Step Progress bar */}
+      <div className="wizard-progress" aria-label={`Шаг ${step + 1} из ${wizardSteps.length}`}>
+        {wizardSteps.map((label, index) => (
+          <div
+            className={`wizard-progress-item ${index < step ? "done" : ""} ${index === step ? "active" : ""}`}
+            key={label}
+          >
+            <span>{index < step ? <CheckIcon size={12} /> : index + 1}</span>
+            <b>{label}</b>
+            {index < wizardSteps.length - 1 && <i />}
+          </div>
+        ))}
+      </div>
+
       <div className="wizard-shell">
-        <aside className="wizard-aside">
+        <aside className="wizard-aside card-glass">
           <div className="aside-number">0{step + 1}</div>
-          <p>{step === 0 ? "Начнём с основы" : step === 1 ? "Найдём твой вектор" : step === 2 ? "Оценим готовность" : step === 3 ? "Учтём ограничения" : "Всё верно?"}</p>
-          <h2>{step === 0 ? "Кто ты и когда поступаешь?" : step === 1 ? "Что тебе действительно интересно?" : step === 2 ? "Что уже есть в твоём профиле?" : step === 3 ? "Какая учёба подойдёт тебе?" : "Твой профиль готов"}</h2>
-          <div className="aside-tip"><SparkIcon /><span>{step === 2 ? "Нет результата экзамена? Оставь поле пустым — добавим подготовку в план." : "Ответы можно изменить позже. Результаты пересчитаются автоматически."}</span></div>
+          <p>
+            {step === 0
+              ? "Базовая информация"
+              : step === 1
+              ? "Специальности & ЕНТ"
+              : step === 2
+              ? "Академический профиль"
+              : step === 3
+              ? "Бюджет и критерии"
+              : "Проверка данных"}
+          </p>
+          <h2>
+            {step === 0
+              ? "Кто ты и когда планируешь поступать?"
+              : step === 1
+              ? "Выбери до 3 направлений (как на Niche)"
+              : step === 2
+              ? "Средний балл GPA (4.0) и результаты экзаменов"
+              : step === 3
+              ? "Где и на каких условиях хочешь учиться?"
+              : "Твой профиль сформирован!"}
+          </h2>
+          <div className="aside-tip">
+            <SparkIcon size={16} />
+            <span>
+              {step === 0
+                ? "Выбор класса автоматически настраивает расчётный год выпуска и начала приёмной кампании."
+                : step === 1
+                ? "Ты можешь выбрать до 3 направлений. Система учтет профильные предметы ЕНТ и подберёт междисциплинарные вузы."
+                : step === 2
+                ? "В школах и лицеях РК стандартом является шкала GPA 4.0. Если ещё не сдавал ЕНТ/IELTS — оставь поле пустым."
+                : "Все параметры можно будет смоделировать в симуляторе «Что если?»."}
+            </span>
+          </div>
         </aside>
-        <section className="wizard-card">
+
+        <section className="wizard-card card-glass">
+          {/* STEP 0: О тебе, класс, родной город */}
           {step === 0 && (
             <div className="form-stack">
               <div className="question-block">
-                <label htmlFor="name">Как тебя зовут? <small>необязательно</small></label>
-                <input id="name" className="text-input" placeholder="Например, Алия" value={profile.name} onChange={(event) => patch({ name: event.target.value })} />
+                <label htmlFor="name">
+                  Как тебя зовут? <small>для персонализации маршрута</small>
+                </label>
+                <input
+                  id="name"
+                  className="text-input"
+                  placeholder="Например, Алия"
+                  value={profile.name}
+                  onChange={(e) => patch({ name: e.target.value })}
+                />
               </div>
-              <div className="question-block"><label>Текущий класс</label><div className="segmented three">{(["10", "11", "Выпускник"] as const).map((value) => <button className={profile.grade === value ? "selected" : ""} key={value} onClick={() => patch({ grade: value })}>{value === "Выпускник" ? value : `${value} класс`}</button>)}</div></div>
+
+              <div className="question-block">
+                <label>Текущий класс / статус</label>
+                <div className="segmented-grid">
+                  {(["9", "10", "11", "Выпускник школы", "Студент колледжа"] as const).map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      className={profile.grade === val ? "selected" : ""}
+                      onClick={() => handleGradeChange(val)}
+                    >
+                      {val.includes("класс") || val.length > 2 ? val : `${val} класс`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="form-row">
-                <div className="question-block"><label htmlFor="city">Город проживания</label><input id="city" className="text-input" value={profile.homeCity} onChange={(event) => patch({ homeCity: event.target.value })} /></div>
-                <div className="question-block"><label htmlFor="year">Год поступления</label><select id="year" className="text-input" value={profile.enrollmentYear} onChange={(event) => patch({ enrollmentYear: Number(event.target.value) as 2027 | 2028 })}><option value={2027}>2027</option><option value={2028}>2028</option></select></div>
+                <div className="question-block">
+                  <label htmlFor="city-select">Родной город в Казахстане</label>
+                  <div className="city-input-select-group">
+                    <select
+                      id="city-select"
+                      className="text-input"
+                      value={kazakhstanHometowns.includes(profile.homeCity) ? profile.homeCity : "other"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === "other") {
+                          patch({ homeCity: "" });
+                        } else {
+                          patch({ homeCity: val });
+                        }
+                      }}
+                    >
+                      {kazakhstanHometowns.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                      <option value="other">Другой город / посёлок...</option>
+                    </select>
+
+                    {/* ONLY SHOW CUSTOM INPUT WHEN "other" IS SELECTED */}
+                    {!kazakhstanHometowns.includes(profile.homeCity) && (
+                      <div className="custom-city-wrapper" style={{ marginTop: "8px" }}>
+                        <input
+                          id="city-custom"
+                          className="text-input"
+                          placeholder="Введи название своего города или посёлка..."
+                          value={profile.homeCity}
+                          autoFocus
+                          onChange={(e) => patch({ homeCity: e.target.value })}
+                        />
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}>
+                          <small className="field-hint">
+                            Укажи населённый пункт (для расчёта региональных квот МОН РК).
+                          </small>
+                          <button
+                            type="button"
+                            className="text-button"
+                            style={{ fontSize: "12px", color: "var(--accent-primary, #10b981)" }}
+                            onClick={() => patch({ homeCity: "Астана" })}
+                          >
+                            ← Выбрать из списка
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="question-block">
+                  <label htmlFor="year">
+                    Год поступления <small>(авторасчёт)</small>
+                  </label>
+                  <select
+                    id="year"
+                    className="text-input"
+                    value={profile.enrollmentYear}
+                    onChange={(e) => patch({ enrollmentYear: Number(e.target.value) as any })}
+                  >
+                    <option value={2027}>2027 год (набор следующего лета)</option>
+                    <option value={2028}>2028 год</option>
+                    <option value={2029}>2029 год</option>
+                    <option value={2030}>2030 год</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}
+
+          {/* STEP 1: Направления (до 3) и профильная комбинация ЕНТ */}
           {step === 1 && (
             <div className="form-stack">
-              <div className="question-block"><label>Выбери основное направление</label><p className="field-hint">Мы покажем близкие программы, но приоритет отдаём этому выбору.</p><div className="interest-grid">{Object.entries(interestLabels).map(([key, item]) => <button key={key} className={`interest-card ${profile.interest === key ? "selected" : ""}`} onClick={() => patch({ interest: key as Interest })}><span className="interest-icon">{item.icon}</span><span><strong>{item.title}</strong><small>{item.description}</small></span><i>{profile.interest === key && <CheckIcon />}</i></button>)}</div></div>
-              <div className="question-block"><label>Сильные предметы <small>до 3</small></label><div className="chip-list">{subjects.map((subject) => { const active = profile.favoriteSubjects.includes(subject); return <button className={active ? "chip active" : "chip"} key={subject} onClick={() => patch({ favoriteSubjects: active ? profile.favoriteSubjects.filter((item) => item !== subject) : profile.favoriteSubjects.length < 3 ? [...profile.favoriteSubjects, subject] : profile.favoriteSubjects })}>{active && <CheckIcon />}{subject}</button>; })}</div></div>
+              <div className="question-block">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                  <label style={{ margin: 0 }}>
+                    Выбери профессиональные сферы и направления <small>(до 3)</small>
+                  </label>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      background: selectedInterests.length === 3 ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.08)",
+                      border: selectedInterests.length === 3 ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(255, 255, 255, 0.12)",
+                      borderRadius: "999px",
+                      padding: "3px 10px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      color: selectedInterests.length === 3 ? "#10b981" : "inherit",
+                    }}
+                  >
+                    Выбрано: <strong>{selectedInterests.length}</strong> из 3
+                  </span>
+                </div>
+                <p className="field-hint">
+                  Каталог направлений по стандартам <b>Niche</b>: отметь от 1 до 3 направлений, чтобы система подобрала программы казахстанских и зарубежных вузов.
+                </p>
+
+                {/* CATEGORY TABS LIKE NICHE */}
+                <div
+                  className="category-tabs-bar"
+                  style={{
+                    display: "flex",
+                    gap: "6px",
+                    overflowX: "auto",
+                    paddingBottom: "8px",
+                    marginBottom: "12px",
+                  }}
+                >
+                  {interestCategories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      style={{
+                        padding: "6px 12px",
+                        fontSize: "12px",
+                        borderRadius: "8px",
+                        whiteSpace: "nowrap",
+                        border: activeCategory === cat.id ? "1px solid var(--accent-primary, #10b981)" : "1px solid rgba(255, 255, 255, 0.1)",
+                        background: activeCategory === cat.id ? "rgba(16, 185, 129, 0.12)" : "rgba(255, 255, 255, 0.03)",
+                        color: activeCategory === cat.id ? "#10b981" : "inherit",
+                        cursor: "pointer",
+                        fontWeight: activeCategory === cat.id ? 600 : 400,
+                      }}
+                      onClick={() => setActiveCategory(cat.id)}
+                    >
+                      <span>{cat.icon}</span> {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* INTEREST CARDS GRID */}
+                <div className="interest-grid-expanded">
+                  {Object.entries(interestLabels)
+                    .filter(([_, item]) => activeCategory === "all" || item.category === activeCategory)
+                    .map(([key, item]) => {
+                      const isSelected = selectedInterests.includes(key as Interest);
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          className={`interest-card ${isSelected ? "selected" : ""}`}
+                          onClick={() => toggleInterest(key as Interest)}
+                        >
+                          <span className="interest-icon">{item.icon}</span>
+                          <span className="interest-text">
+                            <strong>{item.title}</strong>
+                            <small>{item.description}</small>
+                          </span>
+                          <i>{isSelected && <CheckIcon size={14} />}</i>
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+
+              {/* UNT SUBJECT COMBINATION */}
+              <div className="question-block" style={{ marginTop: "20px" }}>
+                <label>
+                  Профильная комбинация предметов ЕНТ <small>критично для конкурса грантов РК</small>
+                </label>
+                <div className="unt-comb-picker-grid">
+                  {untCombinationsList.map((comb) => (
+                    <button
+                      key={comb}
+                      type="button"
+                      className={`unt-comb-btn ${profile.untCombination === comb ? "active" : ""}`}
+                      onClick={() => patch({ untCombination: comb })}
+                    >
+                      <span>{comb}</span>
+                      {profile.untCombination === comb && <CheckIcon size={14} />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="question-block">
+                <label>
+                  Любимые предметы в школе <small>до 3</small>
+                </label>
+                <div className="chip-list">
+                  {subjects.map((sub) => {
+                    const active = profile.favoriteSubjects.includes(sub);
+                    return (
+                      <button
+                        key={sub}
+                        type="button"
+                        className={`chip ${active ? "active" : ""}`}
+                        onClick={() =>
+                          patch({
+                            favoriteSubjects: active
+                              ? profile.favoriteSubjects.filter((s) => s !== sub)
+                              : profile.favoriteSubjects.length < 3
+                              ? [...profile.favoriteSubjects, sub]
+                              : profile.favoriteSubjects,
+                          })
+                        }
+                      >
+                        {active && <CheckIcon size={12} />} {sub}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
+
+          {/* STEP 2: Академика (GPA 4.0, ЕНТ, IELTS, SAT) */}
           {step === 2 && (
             <div className="form-stack">
-              <div className="metric-input"><div><label htmlFor="gpa">Средний балл аттестата</label><p>По 5-балльной шкале</p></div><div className="number-field"><input id="gpa" type="number" min="3" max="5" step="0.1" value={profile.gpa} onChange={(event) => patch({ gpa: Number(event.target.value) })} /><span>/ 5.0</span></div></div>
-              <div className="metric-input"><div><label htmlFor="unt">Пробный или итоговый ЕНТ</label><p>Оставь пустым, если ещё не сдавал</p></div><div className="number-field"><input id="unt" type="number" min="0" max="140" placeholder="—" value={profile.unt ?? ""} onChange={(event) => patch({ unt: event.target.value ? Number(event.target.value) : undefined })} /><span>/ 140</span></div></div>
-              <div className="metric-input"><div><label htmlFor="ielts">IELTS</label><p>Можно заменить внутренним тестом в части вузов</p></div><div className="number-field"><input id="ielts" type="number" min="0" max="9" step="0.5" placeholder="—" value={profile.ielts ?? ""} onChange={(event) => patch({ ielts: event.target.value ? Number(event.target.value) : undefined })} /><span>/ 9.0</span></div></div>
-              <div className="info-strip"><span>i</span><p>Это не оценка шанса поступления. Баллы нужны, чтобы найти соответствия требованиям и пробелы в подготовке.</p></div>
+              <div className="metric-input">
+                <div>
+                  <label htmlFor="gpa">
+                    Средний балл GPA <small>(шкала 4.0)</small>
+                  </label>
+                  <p>Стандарт НИШ, БИЛ, лицеев и аттестатов РК (3.8–4.0 — отлично; 3.3–3.7 — хорошо)</p>
+                </div>
+                <div className="number-field">
+                  <input
+                    id="gpa"
+                    type="number"
+                    min="2.0"
+                    max="4.0"
+                    step="0.05"
+                    value={profile.gpa}
+                    onChange={(e) => patch({ gpa: Number(e.target.value) })}
+                  />
+                  <span>/ 4.0</span>
+                </div>
+              </div>
+
+              <div className="metric-input">
+                <div>
+                  <label htmlFor="unt">Балл ЕНТ (пробный или итоговый)</label>
+                  <p>Максимум 140 баллов. Если ещё не сдавал, оставь пустым — включим в план.</p>
+                </div>
+                <div className="number-field">
+                  <input
+                    id="unt"
+                    type="number"
+                    min="0"
+                    max="140"
+                    placeholder="—"
+                    value={profile.unt ?? ""}
+                    onChange={(e) => patch({ unt: e.target.value ? Number(e.target.value) : undefined })}
+                  />
+                  <span>/ 140</span>
+                </div>
+              </div>
+
+              <div className="metric-input">
+                <div>
+                  <label htmlFor="ielts">Сертификат IELTS (если есть)</label>
+                  <p>Большинство казахстанских вузов проводят также внутренний экзамен AET/KEET.</p>
+                </div>
+                <div className="number-field">
+                  <input
+                    id="ielts"
+                    type="number"
+                    min="0"
+                    max="9.0"
+                    step="0.5"
+                    placeholder="—"
+                    value={profile.ielts ?? ""}
+                    onChange={(e) => patch({ ielts: e.target.value ? Number(e.target.value) : undefined })}
+                  />
+                  <span>/ 9.0</span>
+                </div>
+              </div>
+
+              <div className="metric-input">
+                <div>
+                  <label htmlFor="sat">Тест SAT / ACT Reasoning <small>(для NU и зарубежных программ)</small></label>
+                  <p>Шкала SAT от 400 до 1600. Полезно для Назарбаев Университета и вузов Европы/США.</p>
+                </div>
+                <div className="number-field">
+                  <input
+                    id="sat"
+                    type="number"
+                    min="400"
+                    max="1600"
+                    step="10"
+                    placeholder="—"
+                    value={profile.sat ?? ""}
+                    onChange={(e) => patch({ sat: e.target.value ? Number(e.target.value) : undefined })}
+                  />
+                  <span>/ 1600</span>
+                </div>
+              </div>
             </div>
           )}
+
+          {/* STEP 3: Города, бюджет, язык и карьерный фокус */}
           {step === 3 && (
             <div className="form-stack compact">
-              <div className="question-block"><label>Где хочешь учиться?</label><div className="chip-list">{cities.map((city) => { const active = profile.preferredCities.includes(city); return <button className={active ? "chip active" : "chip"} key={city} onClick={() => patch({ preferredCities: city === "Любой город" ? [city] : active ? profile.preferredCities.filter((item) => item !== city) : [...profile.preferredCities.filter((item) => item !== "Любой город"), city] })}>{active && <CheckIcon />}{city}</button>; })}</div></div>
-              <div className="question-block"><label>Бюджет на обучение в год</label><div className="budget-grid">{[1_500_000, 2_000_000, 2_500_000, 4_000_000, 8_000_000].map((budget) => <button className={`budget-option ${profile.budget === budget ? "selected" : ""} ${budget === 2_500_000 ? "has-badge" : ""}`} key={budget} onClick={() => patch({ budget })}><span>{budget === 8_000_000 ? "до 8 млн ₸" : `до ${budget / 1_000_000} млн ₸`}</span>{budget === 2_500_000 && <small>Популярный</small>}</button>)}</div></div>
-              <div className="form-row"><div className="question-block"><label htmlFor="language">Язык обучения</label><select id="language" className="text-input" value={profile.language} onChange={(event) => patch({ language: event.target.value as StudentProfile["language"] })}><option>Английский</option><option>Русский / казахский</option><option>Неважно</option></select></div><div className="question-block"><label htmlFor="focus">Что важнее?</label><select id="focus" className="text-input" value={profile.careerFocus} onChange={(event) => patch({ careerFocus: event.target.value as StudentProfile["careerFocus"] })}><option>Практика</option><option>Исследования</option><option>Стартапы</option><option>Неважно</option></select></div></div>
-              <label className="toggle-row"><span><strong>Грант особенно важен</strong><small>Учтём грантовую траекторию и разрыв по баллам</small></span><input type="checkbox" checked={profile.scholarshipImportant} onChange={(event) => patch({ scholarshipImportant: event.target.checked })} /><i /></label>
+              <div className="question-block">
+                <label>В каких городах хочешь учиться?</label>
+                <div className="chip-list">
+                  {studyCities.map((city) => {
+                    const active = profile.preferredCities.includes(city);
+                    return (
+                      <button
+                        key={city}
+                        type="button"
+                        className={`chip ${active ? "active" : ""}`}
+                        onClick={() =>
+                          patch({
+                            preferredCities:
+                              city === "Любой город Казахстана"
+                                ? [city]
+                                : active
+                                ? profile.preferredCities.filter((c) => c !== city)
+                                : [...profile.preferredCities.filter((c) => c !== "Любой город Казахстана"), city],
+                          })
+                        }
+                      >
+                        {active && <CheckIcon size={12} />} {city}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* BUDGET WITH ONLY-GRANT TOGGLE */}
+              <div className="question-block">
+                <div className="grant-first-row">
+                  <label className="toggle-row">
+                    <span>
+                      <strong>Рассматриваю только государственный грант (0 ₸)</strong>
+                      <small>Фокус исключительно на траекториях бесплатного обучения</small>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={profile.onlyGrant}
+                      onChange={(e) => patch({ onlyGrant: e.target.checked, scholarshipImportant: true })}
+                    />
+                    <i />
+                  </label>
+                </div>
+
+                {!profile.onlyGrant && (
+                  <>
+                    <label style={{ marginTop: "12px", display: "block" }}>
+                      Или допустимый годовой бюджет на платное обучение:
+                    </label>
+                    <div className="budget-grid">
+                      {[1_200_000, 1_600_000, 2_500_000, 3_500_000, 7_500_000].map((b) => (
+                        <button
+                          key={b}
+                          type="button"
+                          className={`budget-option ${profile.budget === b ? "selected" : ""}`}
+                          onClick={() => patch({ budget: b })}
+                        >
+                          <span>{b >= 5_000_000 ? "свыше 4 млн ₸" : `до ${(b / 1_000_000).toFixed(1)} млн ₸`}</span>
+                          {b === 2_500_000 && <small>Средний тариф</small>}
+                          {b === 1_600_000 && <small>КазНУ/Satbayev/МУИТ</small>}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="form-row">
+                <div className="question-block">
+                  <label htmlFor="lang">Язык обучения</label>
+                  <select
+                    id="lang"
+                    className="text-input"
+                    value={profile.language}
+                    onChange={(e) => patch({ language: e.target.value as any })}
+                  >
+                    <option value="Казахский / русский">Казахский / русский (госстандарт)</option>
+                    <option value="Английский">Английский</option>
+                    <option value="Неважно">Неважно (любой)</option>
+                  </select>
+                </div>
+
+                <div className="question-block">
+                  <label htmlFor="focus">Карьерные амбиции</label>
+                  <select
+                    id="focus"
+                    className="text-input"
+                    value={profile.careerFocus}
+                    onChange={(e) => patch({ careerFocus: e.target.value as any })}
+                  >
+                    {careerFocusesList.map((f) => (
+                      <option key={f} value={f}>
+                        {f}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* ADDITIONAL CONSTRAINTS */}
+              <div className="question-block" style={{ marginTop: "12px" }}>
+                <label>Дополнительные условия и инфраструктура:</label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px", marginTop: "8px" }}>
+                  <label className="toggle-row" style={{ padding: "10px", borderRadius: "10px", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                    <span>
+                      <strong>Нужно общежитие в кампусе</strong>
+                      <small>Важно для иногородних абитуриентов</small>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={profile.dormitoryNeeded ?? true}
+                      onChange={(e) => patch({ dormitoryNeeded: e.target.checked })}
+                    />
+                    <i />
+                  </label>
+                  <label className="toggle-row" style={{ padding: "10px", borderRadius: "10px", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+                    <span>
+                      <strong>Военная кафедра при вузе</strong>
+                      <small>Освобождение от срочной службы</small>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={profile.militaryDepartment ?? false}
+                      onChange={(e) => patch({ militaryDepartment: e.target.checked })}
+                    />
+                    <i />
+                  </label>
+                </div>
+              </div>
             </div>
           )}
-          {step === 4 && <ProfileSummary profile={profile} onEdit={setStep} />}
-          <div className="wizard-footer"><button className="button subtle" onClick={back}><Chevron direction="left" /> Назад</button><span>Шаг {step + 1} из 5</span><button className="button primary" disabled={!canContinue} onClick={next}>{step === 4 ? <><SparkIcon /> Найти мои программы</> : <>Продолжить <Chevron /></>}</button></div>
+
+          {/* STEP 4: Проверка анкеты */}
+          {step === 4 && (
+            <div className="summary-grid">
+              <article>
+                <span>Выбранные направления ({selectedInterests.length})</span>
+                <strong>
+                  {selectedInterests.map((k) => interestLabels[k]?.title || k).join(" • ")}
+                </strong>
+                <button type="button" onClick={() => setStep(1)}>
+                  Изменить
+                </button>
+              </article>
+              <article>
+                <span>Предметы ЕНТ</span>
+                <strong>{profile.untCombination}</strong>
+                <button type="button" onClick={() => setStep(1)}>
+                  Изменить
+                </button>
+              </article>
+              <article>
+                <span>Академика (GPA 4.0)</span>
+                <strong>
+                  {profile.grade.includes("класс") || profile.grade.length > 2 ? profile.grade : `${profile.grade} класс`} • GPA {profile.gpa.toFixed(2)}/4.0 • ЕНТ {profile.unt ?? "не сдан"} {profile.sat ? `• SAT ${profile.sat}` : ""}
+                </strong>
+                <button type="button" onClick={() => setStep(2)}>
+                  Изменить
+                </button>
+              </article>
+              <article>
+                <span>Финансы и города</span>
+                <strong>
+                  {profile.onlyGrant ? "Только госгрант (0 ₸)" : `${formatMoney(profile.budget)} / год`} • {profile.preferredCities.join(", ")}
+                </strong>
+                <button type="button" onClick={() => setStep(3)}>
+                  Изменить
+                </button>
+              </article>
+              <article>
+                <span>Язык и инфраструктура</span>
+                <strong>
+                  {profile.language} • {profile.dormitoryNeeded ? "С общежитием" : "Без общежития"} {profile.militaryDepartment ? "• Воен. кафедра" : ""}
+                </strong>
+                <button type="button" onClick={() => setStep(3)}>
+                  Изменить
+                </button>
+              </article>
+              <article>
+                <span>Выпуск и приём</span>
+                <strong>Лето {profile.enrollmentYear} года</strong>
+                <button type="button" onClick={() => setStep(0)}>
+                  Изменить
+                </button>
+              </article>
+            </div>
+          )}
+
+          <div className="wizard-footer">
+            <button type="button" className="button subtle" onClick={back}>
+              <Chevron direction="left" /> Назад
+            </button>
+            <span>Шаг {step + 1} из 5</span>
+            <button type="button" className="button primary" disabled={!canContinue} onClick={next}>
+              {step === 4 ? (
+                <>
+                  <SparkIcon /> Построить персональный маршрут
+                </>
+              ) : (
+                <>
+                  Продолжить <Chevron />
+                </>
+              )}
+            </button>
+          </div>
         </section>
       </div>
     </main>
   );
 }
 
-function ProfileSummary({ profile, onEdit }: { profile: StudentProfile; onEdit: (step: number) => void }) {
-  const blocks = [
-    { label: "Цель", value: interestLabels[profile.interest].title, step: 1 },
-    { label: "Профиль", value: `${profile.grade} класс · ${profile.gpa}/5 · ЕНТ ${profile.unt ?? "не указан"}`, step: 2 },
-    { label: "Английский", value: profile.ielts ? `IELTS ${profile.ielts}` : "Экзамен не сдан", step: 2 },
-    { label: "Города", value: profile.preferredCities.join(", "), step: 3 },
-    { label: "Бюджет", value: `${formatMoney(profile.budget)} / год`, step: 3 },
-    { label: "Старт", value: `Осень ${profile.enrollmentYear}`, step: 0 },
-  ];
-  return <div className="summary-grid">{blocks.map((block) => <article key={block.label}><span>{block.label}</span><strong>{block.value}</strong><button onClick={() => onEdit(block.step)}>Изменить</button></article>)}</div>;
-}
+/* =========================================================================
+   RESULTS SCREEN WITH ENHANCED DIAGNOSTICS
+   ========================================================================= */
 
-function ProductProgress({ active }: { active: "results" | "compare" | "roadmap" }) {
-  const order = ["Профиль", "Диагностика", "Рекомендации", "Сравнение", "Маршрут"];
-  const current = active === "results" ? 2 : active === "compare" ? 3 : 4;
-  return <div className="product-progress">{order.map((item, index) => <div key={item} className={index < current ? "done" : index === current ? "active" : ""}><span>{index < current ? <CheckIcon /> : index + 1}</span><b>{item}</b>{index < order.length - 1 && <i />}</div>)}</div>;
-}
-
-function DashboardHeader({ active, onEdit }: { active: "results" | "compare" | "roadmap"; onEdit: () => void }) {
-  return <div className="dashboard-head"><ProductProgress active={active} /><button className="edit-profile" onClick={onEdit}><span>✎</span> Изменить профиль</button></div>;
-}
-
-function ScoreRing({ value, size = "normal" }: { value: number; size?: "small" | "normal" | "large" }) {
-  return <div className={`score-ring ${size}`} style={{ "--score": `${value * 3.6}deg` } as React.CSSProperties}><div><strong>{value}</strong><small>/100</small></div></div>;
-}
-
-function ConfidenceBadge({ confidence }: { confidence: Match["program"]["tuitionConfidence"] }) {
-  const content = confidence === "verified" ? ["verified", "Проверено"] : confidence === "previous-year" ? ["previous", "Прошлый год"] : ["demo", "Демо-оценка"];
-  return <span className={`confidence ${content[0]}`}><i />{content[1]}</span>;
-}
-
-function Results({ profile, matches, notice, onEdit, onCompare, onRoadmap, onTarget }: { profile: StudentProfile; matches: Match[]; notice: string; onEdit: () => void; onCompare: () => void; onRoadmap: () => void; onTarget: (id: string) => void }) {
+function ResultsScreen({
+  profile,
+  matches,
+  notice,
+  shortlistIds,
+  onToggleShortlist,
+  onEdit,
+  onCompare,
+  onRoadmap,
+  onTarget,
+  onViewProgram,
+  onOpenWhatIf,
+}: {
+  profile: StudentProfile;
+  matches: Match[];
+  notice: string;
+  shortlistIds: string[];
+  onToggleShortlist: (id: string) => void;
+  onEdit: () => void;
+  onCompare: () => void;
+  onRoadmap: () => void;
+  onTarget: (id: string) => void;
+  onViewProgram: (id: string) => void;
+  onOpenWhatIf: () => void;
+}) {
   const readiness = profileReadiness(profile);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const strengths = [profile.gpa >= 4.2 ? `Сильный средний балл — ${profile.gpa}/5` : "Профиль заполнен для первичной оценки", profile.unt ? `ЕНТ ${profile.unt} открывает платные траектории в выбранных программах` : "ЕНТ добавлен в план подготовки", profile.ielts ? `IELTS ${profile.ielts} подходит части англоязычных программ` : "Есть варианты с внутренним English test"];
-  const constraints = [profile.scholarshipImportant ? "Грант важен — конкуренция потребует усилить ЕНТ" : "Бюджет — основной фильтр", profile.budget < 2_500_000 ? "Часть англоязычных программ выше бюджета" : "Для NU потребуется отдельная финансовая траектория"];
+  const [expandedId, setExpandedId] = useState<string | null>(matches[0]?.program.id ?? null);
 
-  return <main className="dashboard container">
-    <DashboardHeader active="results" onEdit={onEdit} />
-    {notice && <div className="change-banner"><span>↻</span><div><strong>Маршрут пересчитан</strong><p>{notice}</p></div></div>}
-    <section className="results-intro"><div><p className="section-kicker">ТВОЙ РЕЗУЛЬТАТ</p><h1>{profile.name ? `${profile.name}, ` : ""}вот твой профиль поступления</h1><p>Мы сопоставили твою цель, академику и ограничения с требованиями программ.</p></div><div className="readiness-card"><ScoreRing value={readiness} size="large" /><div><span>Готовность профиля</span><strong>{readiness >= 80 ? "Хорошая база" : "Есть понятные точки роста"}</strong><small>Это полнота и соответствие профиля, а не шанс поступления.</small></div></div></section>
-    <section className="diagnosis-grid"><article><div className="diagnosis-title good"><span>↑</span><div><small>Сильные стороны</small><strong>{strengths.length} сигнала</strong></div></div><ul>{strengths.map((item) => <li key={item}><CheckIcon />{item}</li>)}</ul></article><article><div className="diagnosis-title attention"><span>!</span><div><small>Что учесть</small><strong>{constraints.length} ограничения</strong></div></div><ul>{constraints.map((item) => <li key={item}><b>—</b>{item}</li>)}</ul></article><article className="goal-card"><small>Твоя цель</small><strong>{interestLabels[profile.interest].title}</strong><span>{profile.preferredCities.join(" · ")} · {profile.enrollmentYear}</span><div className="goal-tags"><i>{formatMoney(profile.budget)}</i><i>{profile.language}</i></div></article></section>
-    <section className="matches-section"><div className="section-heading"><div><p className="section-kicker">ПЕРСОНАЛЬНЫЙ МЭТЧИНГ</p><h2>Программы, которые подходят тебе</h2><p>Баллы показывают совместимость профиля по шести критериям — не вероятность поступления.</p></div><button className="button outline" onClick={onCompare}>Сравнить варианты <Chevron /></button></div>
-      <div className="matches-list">{matches.map((match, index) => <MatchCard key={match.program.id} match={match} rank={index} expanded={expanded === match.program.id} onExpand={() => setExpanded(expanded === match.program.id ? null : match.program.id)} onTarget={() => { onTarget(match.program.id); onRoadmap(); }} />)}</div>
-    </section>
-  </main>;
-}
+  const profileInterests: Interest[] =
+    profile.interests && profile.interests.length > 0
+      ? profile.interests
+      : profile.interest
+      ? [profile.interest]
+      : [];
 
-function MatchCard({ match, rank, expanded, onExpand, onTarget }: { match: Match; rank: number; expanded: boolean; onExpand: () => void; onTarget: () => void }) {
-  const labels = ["Лучшее совпадение", "Сильный вариант", "Альтернатива", "Стоит рассмотреть"];
-  const breakdownLabels: Array<[keyof Match["breakdown"], string]> = [["academic", "Академика"], ["program", "Направление"], ["budget", "Бюджет"], ["language", "Язык"], ["location", "Локация"], ["preferences", "Приоритеты"]];
-  return <article className={`match-card ${rank === 0 ? "featured" : ""}`}>
-    <div className="match-rank"><span>0{rank + 1}</span><b>{labels[rank]}</b></div>
-    <div className="match-main"><div className="uni-mark">{match.program.shortName.slice(0, 2)}</div><div className="match-info"><div className="match-meta"><span>{match.program.city}</span><i>•</i><span>{match.program.duration}</span><i>•</i><span>{match.program.language}</span></div><h3>{match.program.university}</h3><p>{match.program.program} <span>{match.program.code}</span></p><div className="tag-row">{match.program.highlights.slice(0, 3).map((tag) => <span key={tag}>{tag}</span>)}</div></div><ScoreRing value={match.score} /></div>
-    <div className="match-columns"><div className="why"><h4>Почему подходит</h4>{match.reasons.slice(0, 3).map((reason) => <p key={reason}><i><CheckIcon /></i>{reason}</p>)}</div><div className="fact-box"><div><span>Стоимость</span><strong>{match.program.tuitionLabel}</strong><ConfidenceBadge confidence={match.program.tuitionConfidence} /></div><div><span>Твой бюджет</span><strong>{match.breakdown.budget === 100 ? "Подходит" : "Нужен грант / запас"}</strong></div></div></div>
-    {match.gaps.length > 0 && <div className="gap-line"><span>!</span><p><strong>Точка роста:</strong> {match.gaps[0]}</p></div>}
-    {expanded && <div className="match-details"><div><h4>Почему {match.score}/100?</h4>{breakdownLabels.map(([key, label]) => <div className="score-bar" key={key}><span>{label}</span><i><b style={{ width: `${match.breakdown[key]}%` }} /></i><strong>{match.breakdown[key]}</strong></div>)}</div><div className="requirements"><h4>Требования и прозрачность</h4><p><span>ЕНТ, платное</span><strong>{match.program.untPaid ? `${match.program.untPaid}+` : "уточнить"}</strong></p><p><span>IELTS</span><strong>{match.program.ielts ? `${match.program.ielts}+` : match.program.alternativeEnglishExam ? "внутренний тест" : "уточнить"}</strong></p><p><span>Актуальность цены</span><strong>{match.program.tuitionYear}</strong></p>{match.program.dataNote && <small>{match.program.dataNote}</small>}<a href={match.program.source.url} target="_blank" rel="noreferrer">Открыть официальный источник ↗</a></div></div>}
-    <div className="match-footer"><button className="text-button" onClick={onExpand}>{expanded ? "Скрыть детали" : "Подробнее о мэтче"} <Chevron direction={expanded ? "down" : "right"} /></button><button className="button dark" onClick={onTarget}>Выбрать целью <Chevron /></button></div>
-  </article>;
-}
-
-function Compare({ matches, onEdit, onRoadmap, onTarget }: { matches: Match[]; onEdit: () => void; onRoadmap: () => void; onTarget: (id: string) => void }) {
-  const [leftId, setLeftId] = useState(matches[0]?.program.id ?? "");
-  const [rightId, setRightId] = useState(matches[1]?.program.id ?? "");
-  const left = matches.find((item) => item.program.id === leftId) ?? matches[0];
-  const right = matches.find((item) => item.program.id === rightId) ?? matches[1];
-  if (!left || !right) return null;
-  const rows = [
-    ["Совместимость", `${left.score}/100`, `${right.score}/100`],
-    ["Стоимость", left.program.tuitionLabel, right.program.tuitionLabel],
-    ["Город", left.program.city, right.program.city],
-    ["Срок обучения", left.program.duration, right.program.duration],
-    ["Язык", left.program.language, right.program.language],
-    ["ЕНТ — платное", left.program.untPaid ? `${left.program.untPaid}+` : "уточнить", right.program.untPaid ? `${right.program.untPaid}+` : "уточнить"],
-    ["IELTS", left.program.ielts ? `${left.program.ielts}+` : left.program.alternativeEnglishExam ? "внутренний тест" : "уточнить", right.program.ielts ? `${right.program.ielts}+` : right.program.alternativeEnglishExam ? "внутренний тест" : "уточнить"],
-    ["Бюджет", left.breakdown.budget >= 70 ? "Подходит" : "Выше бюджета", right.breakdown.budget >= 70 ? "Подходит" : "Выше бюджета"],
+  const strengths = [
+    profile.gpa >= 3.6 ? `Высокий средний балл GPA — ${profile.gpa.toFixed(2)} из 4.0` : `GPA ${profile.gpa.toFixed(2)}/4.0 принят к расчёту`,
+    profile.unt
+      ? `Текущий ЕНТ ${profile.unt} даёт допуск в аккредитованные вузы`
+      : "ЕНТ добавлен в персональный таймлайн подготовки",
+    profile.untCombination !== "Ещё не определился"
+      ? `Профильная комбинация ЕНТ «${profile.untCombination}» точно подходит для выбранных направлений`
+      : "Рекомендуется зафиксировать комбинацию предметов ЕНТ",
+    profile.ielts
+      ? `IELTS ${profile.ielts} снимает языковой барьер при поступлении`
+      : "Вузы принимают вступительный тест AET/KEET вместо IELTS",
+    ...(profile.sat ? [`Балл SAT ${profile.sat} даёт преимущество для Назарбаев Университета и зарубежных вузов`] : []),
   ];
-  return <main className="dashboard container"><DashboardHeader active="compare" onEdit={onEdit} /><div className="page-title"><p className="section-kicker">СРАВНЕНИЕ</p><h1>Два варианта — одно осознанное решение</h1><p>Смотри на то, что важно именно для твоего профиля.</p></div><section className="compare-shell"><div className="compare-head"><div className="compare-label">Критерий</div>{[left, right].map((match, index) => <div className="compare-program" key={`${match.program.id}-${index}`}><select value={index === 0 ? leftId : rightId} onChange={(event) => index === 0 ? setLeftId(event.target.value) : setRightId(event.target.value)}>{matches.filter((item) => index === 0 ? item.program.id !== rightId : item.program.id !== leftId).map((item) => <option value={item.program.id} key={item.program.id}>{item.program.shortName} · {item.program.program}</option>)}</select><div><span className="uni-mark small">{match.program.shortName.slice(0, 2)}</span><div><strong>{match.program.shortName}</strong><small>{match.program.program}</small></div><ScoreRing value={match.score} size="small" /></div></div>)}</div>{rows.map(([label, leftValue, rightValue]) => <div className="compare-row" key={label}><span>{label}</span><strong className={leftValue === "Подходит" ? "positive" : ""}>{leftValue}</strong><strong className={rightValue === "Подходит" ? "positive" : ""}>{rightValue}</strong></div>)}<div className="compare-verdict"><span>Персональный вывод</span><div><strong>{left.score >= right.score ? "Лучший общий мэтч" : "Альтернативный вариант"}</strong><p>{left.reasons[0]}</p></div><div><strong>{right.program.tuitionKzt < left.program.tuitionKzt ? "Выгоднее по стоимости" : "Сильный альтернативный профиль"}</strong><p>{right.reasons[0]}</p></div></div><div className="compare-actions"><span /><button className="button dark" onClick={() => { onTarget(left.program.id); onRoadmap(); }}>Выбрать {left.program.shortName}</button><button className="button outline" onClick={() => { onTarget(right.program.id); onRoadmap(); }}>Выбрать {right.program.shortName}</button></div></section><p className="compare-note">Данные помогают сравнить варианты, но финальные требования всегда проверяй на официальном сайте вуза.</p></main>;
+
+  const constraints = [
+    profile.onlyGrant
+      ? "Выбрана траектория ТОЛЬКО ГРАНТ — конкуренция на конкурсе МОН/Минздрава потребует высокого ЕНТ"
+      : profile.scholarshipImportant
+      ? "Грант в приоритете — ключевой фактор успеха на конкурсе ЕНТ"
+      : "Бюджет достаточен для выбранных программ",
+    profile.budget < 2_000_000 && !profile.onlyGrant
+      ? "Часть столичных англоязычных программ (КБТУ, КИМЭП) выше текущего лимита"
+      : "Финансовый лимит покрывает большинство образовательных программ",
+    ...(profile.dormitoryNeeded ? ["Важно наличие студенческого общежития в кампусе"] : []),
+  ];
+
+  return (
+    <main className="dashboard container">
+      {notice && (
+        <div className="change-banner card-glass">
+          <span>↻</span>
+          <div>
+            <strong>Маршрут пересчитан в реальном времени</strong>
+            <p>{notice}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Intro & Diagnostics */}
+      <section className="results-intro">
+        <div>
+          <div className="eyebrow-pill">
+            <SparkIcon size={14} /> Результаты мэтчинга и объективная диагностика
+          </div>
+          <h1>
+            {profile.name ? `${profile.name}, ` : ""}вот твой персональный вектор поступления
+          </h1>
+          <p className="subtitle">
+            Мы сопоставили твои направления ({profileInterests.map((k) => interestLabels[k]?.title || k).join(", ")}), комбинацию предметов ЕНТ ({profile.untCombination}), GPA {profile.gpa.toFixed(2)}/4.0 и
+            финансовую траекторию с официальными данными вузов.
+          </p>
+        </div>
+
+        <div className="readiness-card card-glass">
+          <ScoreRing value={readiness} size="large" />
+          <div>
+            <span>Готовность профиля</span>
+            <strong>{readiness >= 80 ? "Сильная база поступления" : "Есть понятные точки роста"}</strong>
+            <small>Полнота данных и соответствие критериям отбора.</small>
+          </div>
+        </div>
+      </section>
+
+      {/* Diagnosis Grid */}
+      <section className="diagnosis-grid">
+        <article className="card-glass">
+          <div className="diagnosis-title good">
+            <span>↑</span>
+            <div>
+              <small>Сильные сигналы</small>
+              <strong>{strengths.length} преимущества</strong>
+            </div>
+          </div>
+          <ul>
+            {strengths.map((item) => (
+              <li key={item}>
+                <CheckIcon size={14} /> {item}
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="card-glass">
+          <div className="diagnosis-title attention">
+            <span>!</span>
+            <div>
+              <small>Точки внимания и риски</small>
+              <strong>{constraints.length} фактора</strong>
+            </div>
+          </div>
+          <ul>
+            {constraints.map((item) => (
+              <li key={item}>
+                <b>—</b> {item}
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article className="goal-card card-glass">
+          <small>Выбранные сферы ({profileInterests.length})</small>
+          <strong>
+            {profileInterests.map((k) => interestLabels[k]?.title || k).join(" • ")}
+          </strong>
+          <span>
+            {profile.preferredCities.join(" • ")} • Набор {profile.enrollmentYear} года
+          </span>
+          <div className="goal-tags">
+            <i>{profile.onlyGrant ? "Только грант (0 ₸)" : `${formatMoney(profile.budget)} / год`}</i>
+            <i>{profile.language}</i>
+            <i>{profile.careerFocus}</i>
+            {profile.dormitoryNeeded && <i>Общежитие</i>}
+            {profile.militaryDepartment && <i>Воен. кафедра</i>}
+          </div>
+          <button className="button subtle small edit-btn" onClick={onEdit}>
+            ✎ Редактировать профиль
+          </button>
+        </article>
+      </section>
+
+      {/* Matches List */}
+      <section className="matches-section">
+        <div className="section-heading">
+          <div>
+            <p className="section-kicker">РЕКОМЕНДОВАННЫЙ ТОП ПРОГРАММ</p>
+            <h2>Лучшие университеты Казахстана для твоего выбора</h2>
+            <p>Диверсифицированная подборка (не более одной программы от одного вуза в топе).</p>
+          </div>
+          <div className="header-actions-group">
+            <button className="button ghost small" onClick={onOpenWhatIf}>
+              <SlidersIcon size={14} /> Симулятор «Что если?»
+            </button>
+            <button className="button outline small" onClick={onCompare}>
+              Сравнить варианты <Chevron size={14} />
+            </button>
+          </div>
+        </div>
+
+        <div className="matches-list">
+          {matches.map((match, index) => {
+            const isExpanded = expandedId === match.program.id;
+            const isBookmarked = shortlistIds.includes(match.program.id);
+
+            return (
+              <article
+                className={`match-card card-glass ${index === 0 ? "featured" : ""}`}
+                key={match.program.id}
+              >
+                <div className="match-rank">
+                  <span>0{index + 1}</span>
+                  <b>{index === 0 ? "Лучшее совпадение" : index === 1 ? "Сильный вариант" : "Альтернатива"}</b>
+                  <button
+                    className={`bookmark-btn ${isBookmarked ? "active" : ""}`}
+                    onClick={() => onToggleShortlist(match.program.id)}
+                    title={isBookmarked ? "В шорт-листе" : "Добавить в шорт-лист"}
+                  >
+                    <BookmarkIcon filled={isBookmarked} size={16} />
+                  </button>
+                </div>
+
+                <div className="match-main">
+                  <span className="uni-mark">{match.program.shortName.slice(0, 2)}</span>
+                  <div className="match-info">
+                    <div className="match-meta">
+                      <span>{match.program.city}</span>
+                      <i>•</i>
+                      <span>{match.program.duration}</span>
+                      <i>•</i>
+                      <span>{match.program.language}</span>
+                    </div>
+                    <h3>{match.program.university}</h3>
+                    <p>
+                      {match.program.program} <span>{match.program.code}</span>
+                    </p>
+                    <div className="tag-row">
+                      {match.program.highlights.slice(0, 3).map((tag) => (
+                        <span key={tag}>{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <ScoreRing value={match.score} size="normal" />
+                </div>
+
+                <div className="match-columns">
+                  <div className="why">
+                    <h4>Почему подходит твоему профилю</h4>
+                    {match.reasons.slice(0, 3).map((reason) => (
+                      <p key={reason}>
+                        <i>
+                          <CheckIcon size={14} />
+                        </i>
+                        {reason}
+                      </p>
+                    ))}
+                  </div>
+                  <div className="fact-box">
+                    <div>
+                      <span>Стоимость</span>
+                      <strong>{match.program.tuitionLabel}</strong>
+                      <ConfidenceBadge confidence={match.program.tuitionConfidence} />
+                    </div>
+                    <div>
+                      <span>Финансирование</span>
+                      <strong className={match.breakdown.budget >= 70 ? "text-success" : "text-warning"}>
+                        {profile.onlyGrant
+                          ? match.program.scholarship
+                            ? "✓ Доступен грант МОН"
+                            : "Только платно"
+                          : match.breakdown.budget === 100
+                          ? "✓ В рамках бюджета"
+                          : "Требуется грант / запас"}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                {match.gaps.length > 0 && (
+                  <div className="gap-line">
+                    <span>!</span>
+                    <p>
+                      <strong>Точка роста:</strong> {match.gaps[0]}
+                    </p>
+                  </div>
+                )}
+
+                {/* Expanded Details Breakdown */}
+                {isExpanded && (
+                  <div className="match-details">
+                    <div>
+                      <h4>Детализация баллов ({match.score}/100)</h4>
+                      {[
+                        ["academic", "Академика"],
+                        ["program", "Направление"],
+                        ["budget", "Бюджет"],
+                        ["language", "Язык"],
+                        ["location", "Локация"],
+                        ["preferences", "Приоритеты"],
+                      ].map(([key, label]) => (
+                        <div className="score-bar" key={key}>
+                          <span>{label}</span>
+                          <i>
+                            <b style={{ width: `${(match.breakdown as any)[key]}%` }} />
+                          </i>
+                          <strong>{(match.breakdown as any)[key]}</strong>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="requirements">
+                      <h4>Требования и источники</h4>
+                      <p>
+                        <span>Профили ЕНТ</span>
+                        <strong>{match.program.untCombinations.join(", ")}</strong>
+                      </p>
+                      <p>
+                        <span>Порог ЕНТ</span>
+                        <strong>{match.program.untPaid ? `${match.program.untPaid}+` : "уточнить"}</strong>
+                      </p>
+                      <p>
+                        <span>Ориентир на грант</span>
+                        <strong>{match.program.untGrant ? `${match.program.untGrant}+` : "конкурсный отбор"}</strong>
+                      </p>
+                      <p>
+                        <span>Тариф за</span>
+                        <strong>{match.program.tuitionYear}</strong>
+                      </p>
+                      {match.program.dataNote && <small>{match.program.dataNote}</small>}
+                      <a href={match.program.source.url} target="_blank" rel="noreferrer">
+                        Официальный портал {match.program.shortName} <ExternalLinkIcon size={12} />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                <div className="match-footer">
+                  <div className="footer-left-buttons">
+                    <button
+                      className="text-button"
+                      onClick={() => setExpandedId(isExpanded ? null : match.program.id)}
+                    >
+                      {isExpanded ? "Скрыть детали" : "Подробнее о мэтче"}
+                      <Chevron direction={isExpanded ? "down" : "right"} size={14} />
+                    </button>
+                    <button
+                      className="button subtle small"
+                      onClick={() => onViewProgram(match.program.id)}
+                    >
+                      Карточка вуза & Отзывы
+                    </button>
+                  </div>
+
+                  <button className="button primary" onClick={() => onTarget(match.program.id)}>
+                    Выбрать целью маршрута <Chevron size={14} />
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </main>
+  );
 }
 
-const taskIcons: Record<RoadmapTask["category"], string> = { profile: "◎", exam: "✦", documents: "▤", application: "↗" };
+/* =========================================================================
+   COMPARE SCREEN
+   ========================================================================= */
 
-function Roadmap({ profile, match, completed, onToggle, onEdit }: { profile: StudentProfile; match: Match; completed: string[]; onToggle: (id: string) => void; onEdit: () => void }) {
+function CompareScreen({
+  matches,
+  profile,
+  defaultLeftId,
+  onEdit,
+  onRoadmap,
+  onTarget,
+  onViewProgram,
+}: {
+  matches: Match[];
+  profile: StudentProfile;
+  defaultLeftId: string;
+  onEdit: () => void;
+  onRoadmap: () => void;
+  onTarget: (id: string) => void;
+  onViewProgram: (id: string) => void;
+}) {
+  const [leftId, setLeftId] = useState(defaultLeftId || matches[0]?.program.id || "");
+  const [rightId, setRightId] = useState(
+    matches.find((m) => m.program.id !== defaultLeftId)?.program.id || matches[1]?.program.id || ""
+  );
+
+  const left = matches.find((m) => m.program.id === leftId) ?? matches[0];
+  const right = matches.find((m) => m.program.id === rightId) ?? matches[1];
+
+  if (!left || !right) return null;
+
+  const rows: Array<[string, string, string]> = [
+    ["Совместимость", `${left.score}/100`, `${right.score}/100`],
+    ["Стоимость обучения", left.program.tuitionLabel, right.program.tuitionLabel],
+    ["Город кампуса", left.program.city, right.program.city],
+    ["Срок программы", left.program.duration, right.program.duration],
+    ["Язык обучения", left.program.language, right.program.language],
+    ["Профильные предметы ЕНТ", left.program.untCombinations.join(" / "), right.program.untCombinations.join(" / ")],
+    [
+      "Порог ЕНТ (платно)",
+      left.program.untPaid ? `${left.program.untPaid}+` : "уточнить",
+      right.program.untPaid ? `${right.program.untPaid}+` : "уточнить",
+    ],
+    [
+      "Ориентир на грант",
+      left.program.untGrant ? `${left.program.untGrant}+` : "конкурс",
+      right.program.untGrant ? `${right.program.untGrant}+` : "конкурс",
+    ],
+    [
+      "Английский (IELTS)",
+      left.program.ielts
+        ? `${left.program.ielts}+`
+        : left.program.alternativeEnglishExam
+        ? "внутренний AET/KEET"
+        : "не требуется",
+      right.program.ielts
+        ? `${right.program.ielts}+`
+        : right.program.alternativeEnglishExam
+        ? "внутренний AET/KEET"
+        : "не требуется",
+    ],
+    [
+      "Трудоустройство выпускников",
+      left.program.employmentRate || "уточнить",
+      right.program.employmentRate || "уточнить",
+    ],
+    [
+      "Ориентир проживания",
+      left.program.livingCostEstimateKzt ? `~${formatMoney(left.program.livingCostEstimateKzt)}/мес` : "уточнить",
+      right.program.livingCostEstimateKzt ? `~${formatMoney(right.program.livingCostEstimateKzt)}/мес` : "уточнить",
+    ],
+  ];
+
+  return (
+    <main className="dashboard container">
+      <div className="section-heading-block">
+        <div className="eyebrow-pill">
+          <SparkIcon size={14} /> Инструмент осознанного выбора
+        </div>
+        <h1>Сравнение двух программ Казахстана</h1>
+        <p className="subtitle">
+          Сопоставь требования, академическую нагрузку, финансовые затраты и перспективы трудоустройства.
+        </p>
+      </div>
+
+      <section className="compare-shell card-glass">
+        <div className="compare-head">
+          <div className="compare-label">Критерий оценки</div>
+          {[left, right].map((match, index) => (
+            <div className="compare-program" key={`${match.program.id}-${index}`}>
+              <select
+                value={index === 0 ? leftId : rightId}
+                onChange={(e) => (index === 0 ? setLeftId(e.target.value) : setRightId(e.target.value))}
+              >
+                {matches
+                  .filter((m) => (index === 0 ? m.program.id !== rightId : m.program.id !== leftId))
+                  .map((m) => (
+                    <option value={m.program.id} key={m.program.id}>
+                      {m.program.shortName} • {m.program.program}
+                    </option>
+                  ))}
+              </select>
+
+              <div className="compare-uni-box">
+                <span className="uni-mark small">{match.program.shortName.slice(0, 2)}</span>
+                <div>
+                  <strong>{match.program.shortName}</strong>
+                  <small>{match.program.program}</small>
+                </div>
+                <ScoreRing value={match.score} size="tiny" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {rows.map(([label, lVal, rVal]) => (
+          <div className="compare-row" key={label}>
+            <span>{label}</span>
+            <strong className={lVal.includes("✓") || lVal.includes("100") ? "positive" : ""}>{lVal}</strong>
+            <strong className={rVal.includes("✓") || rVal.includes("100") ? "positive" : ""}>{rVal}</strong>
+          </div>
+        ))}
+
+        <div className="compare-verdict">
+          <span>Персональный вывод</span>
+          <div>
+            <strong>{left.score >= right.score ? "Лидирует по общему мэтчу" : "Альтернативный вариант"}</strong>
+            <p>{left.reasons[0]}</p>
+          </div>
+          <div>
+            <strong>
+              {right.program.tuitionKzt < left.program.tuitionKzt
+                ? "Выгоднее по стоимости обучения"
+                : "Сильный альтернативный профиль"}
+            </strong>
+            <p>{right.reasons[0]}</p>
+          </div>
+        </div>
+
+        <div className="compare-actions">
+          <span />
+          <button
+            className="button primary"
+            onClick={() => {
+              onTarget(left.program.id);
+              onRoadmap();
+            }}
+          >
+            Выбрать {left.program.shortName} целью
+          </button>
+          <button
+            className="button outline"
+            onClick={() => {
+              onTarget(right.program.id);
+              onRoadmap();
+            }}
+          >
+            Выбрать {right.program.shortName} целью
+          </button>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+/* =========================================================================
+   ROADMAP SCREEN
+   ========================================================================= */
+
+function RoadmapScreen({
+  profile,
+  match,
+  completed,
+  onToggle,
+  onEdit,
+  onChangeTarget,
+  onViewDetails,
+}: {
+  profile: StudentProfile;
+  match: Match;
+  completed: string[];
+  onToggle: (id: string) => void;
+  onEdit: () => void;
+  onChangeTarget: () => void;
+  onViewDetails: () => void;
+}) {
   const tasks = buildRoadmap(profile, match);
   const next = tasks.find((task) => !completed.includes(task.id));
-  const progress = Math.round((completed.filter((id) => tasks.some((task) => task.id === id)).length / tasks.length) * 100);
-  return <main className="dashboard roadmap-page container"><DashboardHeader active="roadmap" onEdit={onEdit} /><div className="page-title roadmap-title"><div><p className="section-kicker">ПЕРСОНАЛЬНЫЙ ROADMAP</p><h1>Твой путь в {match.program.shortName}</h1><p>{match.program.program} · старт осенью {profile.enrollmentYear}</p></div><div className="route-progress"><div style={{ "--progress": `${progress * 3.6}deg` } as React.CSSProperties}><strong>{progress}%</strong></div><span><b>{completed.length} из {tasks.length}</b> шагов выполнено</span></div></div>{next ? <section className="next-action"><div className="next-icon">→</div><div><small>СЛЕДУЮЩЕЕ ДЕЙСТВИЕ</small><h2>{next.title}</h2><p>{next.description}</p><span>{next.dateLabel}</span></div><button className="button light" onClick={() => onToggle(next.id)}><CheckIcon /> Отметить выполненным</button></section> : <section className="next-action complete"><div className="next-icon"><CheckIcon /></div><div><small>МАРШРУТ ПРОЙДЕН</small><h2>Все запланированные шаги отмечены</h2><p>Проверь статус заявки и официальный кабинет выбранного университета.</p></div></section>}
-    <section className="roadmap-layout"><div className="timeline"><div className="timeline-head"><div><h2>План действий</h2><p>Личные ориентиры отделены от официальных сроков.</p></div><div className="legend"><span><i className="personal" />Личная дата</span><span><i className="check" />Нужно проверить</span></div></div>{tasks.map((task, index) => { const done = completed.includes(task.id); return <article className={`timeline-task ${done ? "done" : ""}`} key={task.id}><div className="timeline-line"><span>{done ? <CheckIcon /> : taskIcons[task.category]}</span>{index < tasks.length - 1 && <i />}</div><div className="task-content"><div className="task-top"><span className={`date-label ${task.dateType}`}>{task.dateType === "personal" ? "Личная цель" : task.dateType === "official" ? "Официально" : "Проверить"} · {task.dateLabel}</span><button className={done ? "task-check active" : "task-check"} onClick={() => onToggle(task.id)}>{done ? <><CheckIcon /> Выполнено</> : "Отметить"}</button></div><h3>{task.title}</h3><p>{task.description}</p><details><summary>Почему это важно?</summary><p>{task.reason}</p></details></div></article>; })}</div><aside className="route-sidebar"><div className="route-target"><span>Твоя цель</span><div className="uni-mark">{match.program.shortName.slice(0, 2)}</div><strong>{match.program.university}</strong><p>{match.program.program}</p><a href={match.program.source.url} target="_blank" rel="noreferrer">Официальный источник ↗</a></div><div className="route-warning"><span>!</span><div><strong>Даты 2027 ещё уточняются</strong><p>Мы показываем личные сроки подготовки. Перед подачей сверяй официальную кампанию вуза.</p></div></div><div className="route-stats"><p><span>Стоимость</span><strong>{match.program.tuitionLabel}</strong></p><p><span>ЕНТ</span><strong>{match.program.untPaid ? `${match.program.untPaid}+` : "уточнить"}</strong></p><p><span>Язык</span><strong>{match.program.language}</strong></p></div></aside></section>
-  </main>;
-}
+  const progress = Math.round(
+    (completed.filter((id) => tasks.some((t) => t.id === id)).length / Math.max(1, tasks.length)) * 100
+  );
 
-export function AdmissionApp() {
-  const [saved] = useState(readSavedState);
-  const [screen, setScreen] = useState<Screen>("landing");
-  const [profile, setProfile] = useState<StudentProfile>(saved.profile ?? defaultProfile);
-  const [targetId, setTargetId] = useState<string>(saved.targetId ?? "");
-  const [completed, setCompleted] = useState<string[]>(saved.completed ?? []);
-  const [notice, setNotice] = useState("");
-  const [editingFrom, setEditingFrom] = useState<string>("");
-  const allMatches = useMemo(() => matchPrograms(profile), [profile]);
-  const matches = useMemo(() => diversified(allMatches, 4), [allMatches]);
-  const target = allMatches.find((item) => item.program.id === targetId) ?? matches[0];
-
-  useEffect(() => {
-    window.localStorage.setItem("uniflow-state", JSON.stringify({ profile, targetId, completed }));
-  }, [profile, targetId, completed]);
-
-  const editProfile = () => {
-    setEditingFrom(matches[0]?.program.id ?? "");
-    setScreen("onboarding");
-  };
-  const completeProfile = () => {
-    const nextTop = diversified(matchPrograms(profile), 1)[0];
-    if (editingFrom) {
-      const previous = allMatches.find((item) => item.program.id === editingFrom)?.program.shortName;
-      setNotice(previous && nextTop && previous !== nextTop.program.shortName ? `Лидер изменился: ${previous} → ${nextTop.program.shortName}. Обновлены баллы и шаги.` : "Обновлены баллы совместимости, причины рекомендаций и план действий.");
-    }
-    setTargetId(nextTop?.program.id ?? "");
-    setEditingFrom("");
-    setScreen("results");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-  const showDemo = () => {
-    setProfile(defaultProfile);
-    setTargetId("aitu-big-data");
-    setNotice("");
-    setScreen("results");
-  };
-  const navigate = (next: Screen) => {
-    setScreen(next);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  const taskIcons: Record<RoadmapTask["category"], string> = {
+    profile: "◎",
+    exam: "✦",
+    documents: "▤",
+    application: "↗",
   };
 
-  return <div className="app-shell"><AppHeader screen={screen} onNavigate={navigate} />{screen === "landing" && <Landing onStart={() => { setProfile({ ...defaultProfile, name: "" }); setScreen("onboarding"); }} onDemo={showDemo} />}{screen === "onboarding" && <Onboarding profile={profile} setProfile={setProfile} onCancel={() => setScreen(editingFrom ? "results" : "landing")} onComplete={completeProfile} />}{screen === "results" && <Results profile={profile} matches={matches} notice={notice} onEdit={editProfile} onCompare={() => navigate("compare")} onRoadmap={() => navigate("roadmap")} onTarget={setTargetId} />}{screen === "compare" && <Compare matches={matches} onEdit={editProfile} onRoadmap={() => navigate("roadmap")} onTarget={setTargetId} />}{screen === "roadmap" && target && <Roadmap profile={profile} match={target} completed={completed} onToggle={(id) => setCompleted((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])} onEdit={editProfile} />}<footer><div className="container"><Logo /><p>Рекомендации помогают сориентироваться и не являются гарантией поступления.</p><span>Данные обновлены: 17 сентября 2026</span></div></footer></div>;
+  return (
+    <main className="dashboard roadmap-page container">
+      <div className="page-title roadmap-title">
+        <div>
+          <div className="eyebrow-pill">
+            <SparkIcon size={14} /> Персональный пошаговый маршрут
+          </div>
+          <h1>Твой путь поступления в {match.program.shortName}</h1>
+          <p className="subtitle">
+            {match.program.program} • Набор на осень {profile.enrollmentYear} года
+          </p>
+        </div>
+
+        <div className="route-progress card-glass">
+          <ScoreRing value={progress} size="normal" showLabel={false} />
+          <div>
+            <strong>{progress}% выполнено</strong>
+            <span>{completed.length} из {tasks.length} ключевых шагов</span>
+          </div>
+        </div>
+      </div>
+
+      {next ? (
+        <section className="next-action card-glass">
+          <div className="next-icon">→</div>
+          <div>
+            <small>СЛЕДУЮЩЕЕ ПРИОРИТЕТНОЕ ДЕЙСТВИЕ</small>
+            <h2>{next.title}</h2>
+            <p>{next.description}</p>
+            <span className="action-date">🗓 {next.dateLabel}</span>
+          </div>
+          <button className="button light" onClick={() => onToggle(next.id)}>
+            <CheckIcon size={14} /> Отметить выполненным
+          </button>
+        </section>
+      ) : (
+        <section className="next-action complete card-glass">
+          <div className="next-icon">
+            <CheckIcon size={20} />
+          </div>
+          <div>
+            <small>ПОЗДРАВЛЯЕМ! МАРШРУТ ПРОЙДЕН</small>
+            <h2>Все запланированные шаги отмечены</h2>
+            <p>Следи за приказами о зачислении и проверяй личный кабинет абитуриента {match.program.shortName}.</p>
+          </div>
+        </section>
+      )}
+
+      <section className="roadmap-layout">
+        <div className="timeline card-glass">
+          <div className="timeline-head">
+            <div>
+              <h2>Хронологический план подготовки</h2>
+              <p>Разделяем личные контрольные точки и официальные даты вуза.</p>
+            </div>
+            <div className="legend">
+              <span>
+                <i className="personal" /> Личная цель
+              </span>
+              <span>
+                <i className="check" /> Официальная дата МОН РК
+              </span>
+            </div>
+          </div>
+
+          {tasks.map((task, index) => {
+            const done = completed.includes(task.id);
+            return (
+              <article className={`timeline-task ${done ? "done" : ""}`} key={task.id}>
+                <div className="timeline-line">
+                  <span>{done ? <CheckIcon size={12} /> : taskIcons[task.category]}</span>
+                  {index < tasks.length - 1 && <i />}
+                </div>
+
+                <div className="task-content">
+                  <div className="task-top">
+                    <span className={`date-label ${task.dateType}`}>
+                      {task.dateType === "personal"
+                        ? "Личная цель"
+                        : task.dateType === "official"
+                        ? "Официально"
+                        : "Проверить"}{" "}
+                      • {task.dateLabel}
+                    </span>
+                    <button
+                      className={`task-check ${done ? "active" : ""}`}
+                      onClick={() => onToggle(task.id)}
+                    >
+                      {done ? (
+                        <>
+                          <CheckIcon size={12} /> Выполнено
+                        </>
+                      ) : (
+                        "Отметить"
+                      )}
+                    </button>
+                  </div>
+
+                  <h3>{task.title}</h3>
+                  <p>{task.description}</p>
+                  <details>
+                    <summary>Почему это важно?</summary>
+                    <p>{task.reason}</p>
+                  </details>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+
+        <aside className="route-sidebar">
+          <div className="route-target card-glass">
+            <span>ЦЕЛЕВОЙ УНИВЕРСИТЕТ</span>
+            <span className="uni-mark large">{match.program.shortName.slice(0, 2)}</span>
+            <strong>{match.program.university}</strong>
+            <p>{match.program.program}</p>
+
+            <div className="target-card-btn-group">
+              <button className="button outline small full-width" onClick={onViewDetails}>
+                Карточка программы & Отзывы
+              </button>
+              <button className="text-button" onClick={onChangeTarget}>
+                Сменить целевой вуз
+              </button>
+            </div>
+          </div>
+
+          <div className="route-warning card-glass">
+            <span>!</span>
+            <div>
+              <strong>Даты набора {profile.enrollmentYear} уточняются</strong>
+              <p>
+                Мы показываем ориентировочные сроки подготовки. Всегда сверяй официальный календарь приёма на сайте вуза.
+              </p>
+            </div>
+          </div>
+
+          <div className="route-stats card-glass">
+            <p>
+              <span>Стоимость</span>
+              <strong>{match.program.tuitionLabel}</strong>
+            </p>
+            <p>
+              <span>Порог ЕНТ</span>
+              <strong>{match.program.untPaid ? `${match.program.untPaid}+` : "уточнить"}</strong>
+            </p>
+            <p>
+              <span>Язык</span>
+              <strong>{match.program.language}</strong>
+            </p>
+          </div>
+        </aside>
+      </section>
+    </main>
+  );
 }

@@ -1,4 +1,4 @@
-# LOCUS Case 02 — submission checklist
+# UniFlow Case 02 — submission checklist
 
 Дедлайн: **19 сентября 2026, 12:00 по времени Астаны**.
 
@@ -25,7 +25,7 @@
 - [ ] Ссылка на демо-видео
 - [ ] Ссылка на презентацию
 - [ ] Карточка проекта на aistartify.com
-- [ ] Код кейса `LOCUSCASE2`
+- [ ] Код кейса `UniFlowCASE2`
 
 ## Smoke test перед сабмитом
 
