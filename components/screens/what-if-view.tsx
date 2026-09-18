@@ -4,6 +4,7 @@ import { formatMoney, matchPrograms, calculateWhatIf } from "@/lib/matching";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { ConfidenceBadge } from "@/components/ui/confidence-badge";
 import { SparkIcon, CheckIcon, Chevron } from "@/components/ui/icons";
+import { useI18n } from "@/components/i18n-provider";
 
 export function WhatIfView({
   profile,
@@ -14,6 +15,7 @@ export function WhatIfView({
   onApplyProfile: (updated: StudentProfile) => void;
   onViewProgram: (programId: string) => void;
 }) {
+  const { t, locale } = useI18n();
   const [simProfile, setSimProfile] = useState<StudentProfile>({ ...profile });
 
   const patchSim = (patch: Partial<StudentProfile>) => {
@@ -41,23 +43,23 @@ export function WhatIfView({
       setAiLoading(true);
       const res = await fetch("/api/ai-advisor", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-uniflow-locale": locale },
         body: JSON.stringify({
-          prompt: `Сравни исходный профиль абитуриента и симуляцию:
-Было: ЕНТ ${profile.unt ?? "нет"}, GPA ${profile.gpa ?? "не указан"}, Бюджет ${profile.budget.toLocaleString()} ₸/год.
-Стало в симуляции: ЕНТ ${simProfile.unt ?? "нет"}, GPA ${simProfile.gpa ?? "не указан"}, Бюджет ${simProfile.budget.toLocaleString()} ₸/год.
-Лучший мэтч сейчас: ${simulatedTop.program.university} (${simulatedTop.program.program}, ${simulatedTop.score}% соответствие).
-Дай 2 стратегических совета абитуриенту: стоит ли вкладывать усилия в эту разницу баллов и как это повышает шансы на грант.`,
+          taskType: "scenario",
+          locale,
+          studentProfile: profile,
+          simulatedProfile: simProfile,
         }),
       });
       const data = await res.json();
       if (data.success) {
         setAiAnalysis(data.response);
       } else {
-        setAiAnalysis("Ошибка ответа AI: " + (data.error || "не удалось загрузить"));
+        setAiAnalysis(data.error || t("results.aiError"));
       }
-    } catch (e: any) {
-      setAiAnalysis("Ошибка соединения: " + e.message);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : t("results.aiError");
+      setAiAnalysis(`${t("ai.connectionError")}: ${message}`);
     } finally {
       setAiLoading(false);
     }
@@ -67,11 +69,11 @@ export function WhatIfView({
     <div className="what-if-page container">
       <div className="section-heading-block">
         <div className="eyebrow-pill">
-          <SparkIcon size={14} /> Симулятор сценариев поступления
+          <SparkIcon size={14} /> {t("whatIf.kicker")}
         </div>
-        <h1>Что изменится, если подтянуть ЕНТ, GPA или расширить бюджет?</h1>
+        <h1>{t("whatIf.title")}</h1>
         <p className="subtitle">
-          Интерактивная симуляция: двигай ползунки и смотри в реальном времени, какие гранты и университеты Казахстана станут доступны.
+          {t("whatIf.description")}
         </p>
       </div>
 
@@ -369,7 +371,7 @@ export function WhatIfView({
                 disabled={aiLoading}
                 onClick={handleAskGeminiScenario}
               >
-                ✨ {aiLoading ? "Gemini рассчитывает стратегию..." : "Спросить совет Google Gemini AI по этому сценарию"}
+                ✨ {aiLoading ? t("whatIf.aiLoading") : t("whatIf.aiButton")}
               </button>
 
               {aiAnalysis && (
@@ -387,7 +389,7 @@ export function WhatIfView({
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", color: "#fe7505", fontWeight: 800, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    <span>⚡ AI-стратегия поступления от Gemini</span>
+                    <span>⚡ {t("ai.expertise")}</span>
                   </div>
                   <div style={{ whiteSpace: "pre-wrap" }}>{aiAnalysis}</div>
                 </div>

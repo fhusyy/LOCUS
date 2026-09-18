@@ -24,8 +24,16 @@ npm install
 NEXT_PUBLIC_SUPABASE_URL=https://<your-supabase-project>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
 GEMINI_API_KEY=<your-gemini-api-key>
-NEXT_PUBLIC_GEMINI_API_KEY=<your-gemini-api-key>
+GEMINI_MODEL=gemini-2.5-flash
 ```
+
+`GEMINI_API_KEY` используется только серверным API route. Не добавляйте к нему
+префикс `NEXT_PUBLIC_`: такой префикс встраивает секрет в браузерный bundle.
+
+Для облачного сохранения профиля выполните миграцию
+`supabase/migrations/202609190001_create_uniflow_profiles.sql` через Supabase SQL Editor.
+Без миграции и без авторизации приложение продолжает безопасно работать через
+`localStorage`.
 
 ### 3. Запуск dev-сервера
 ```bash
@@ -66,11 +74,14 @@ LOCUS/
 │       └── results-screen.tsx   # Результаты мэтчинга и карточки вузов
 ├── lib/
 │   ├── gemini.ts                # Интеграция с Google Gemini API
+│   ├── locale.ts                # Поддерживаемые локали RU / ҚАЗ / EN
 │   ├── matching.ts              # Детерминированный движок расчета совместимости
-│   ├── storage.ts               # Персистентность в localStorage
 │   ├── supabase.ts              # Клиент Supabase Auth & Database
 │   ├── types.ts                 # TypeScript типы и интерфейсы
-│   └── universities-data.ts     # База данных IT-программ университетов Казахстана
+│   └── university-catalog.server.ts # Серверный поиск и ранжирование каталога CSV
+├── data/
+│   └── kazakhstan-universities.csv  # 106 вузов Казахстана
+├── supabase/migrations/         # Таблица профилей и RLS-политики
 └── public/
     └── assets/                  # Оптимизированные статические медиа-ресурсы
 ```
@@ -98,6 +109,23 @@ LOCUS/
 ### 3. AI Advisor (ИИ-консультант)
 - Маршрут `app/api/ai-advisor/route.ts` на базе Gemini API.
 - Анализирует профиль абитуриента и генерирует персонализированные советы по улучшению шансов на поступление и получение гранта.
+- Получает от сервера только отобранных кандидатов из CSV и не должен рекомендовать
+  университеты за пределами каталога.
+- System instruction запрещает выдумывать стоимость, требования и гарантии гранта,
+  а также требует явно помечать неизвестные данные.
+- Язык ответа совпадает с выбранным языком интерфейса: русский, қазақша или English.
+
+### 4. Каталог университетов
+- `data/kazakhstan-universities.csv` содержит 106 уникальных организаций из
+  официального списка вузов Казахстана.
+- 17 вузов дополнены программными данными, которые уже использовались в UniFlow;
+  для отсутствующих фактов используется `unknown`, без догадок.
+- Источники: [официальный список вузов](https://www.gov.kz/article/657) и
+  [реестр открытых данных](https://data.egov.kz/datasets/view?index=onirler_oblystar_kalalar_boi7).
+
+### 5. Локализация
+- Провайдер и словари находятся в `components/i18n-provider.tsx`.
+- Выбранная локаль сохраняется в `localStorage` и передаётся в AI API.
 
 ---
 
@@ -112,6 +140,8 @@ LOCUS/
    - Не коммитьте секретные ключи (`.env.local` находится в `.gitignore`).
 4. **Проверка**:
    - Перед завершением любой задачи всегда запускайте `npm run build` для валидации TypeScript и Turbopack.
+   - Сквозной браузерный тест запускается командой `node scripts/smoke.mjs` при
+     работающем приложении на `http://127.0.0.1:4173`.
 
 ---
 

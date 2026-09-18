@@ -4,6 +4,7 @@ import { formatMoney, categorizeProgram } from "@/lib/matching";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { CategoryBadge } from "@/components/ui/confidence-badge";
 import { BookmarkIcon, CheckIcon, Chevron, ExternalLinkIcon, MapPinIcon } from "@/components/ui/icons";
+import { useI18n } from "@/components/i18n-provider";
 
 const stagesList: Array<{ key: ApplicationStage; label: string }> = [
   { key: "research", label: "1. Исследование" },
@@ -37,6 +38,7 @@ export function ShortlistView({
   onViewProgram: (programId: string) => void;
   onExploreMore: () => void;
 }) {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<"shortlist" | "tracker">("shortlist");
 
   // Map matches to shortlisted programs
@@ -56,11 +58,11 @@ export function ShortlistView({
       {/* Header */}
       <div className="section-heading-block">
         <div className="eyebrow-pill">
-          <BookmarkIcon size={14} /> Мои университеты и контроль подачи
+          <BookmarkIcon size={14} /> {t("shortlist.kicker")}
         </div>
-        <h1>Шорт-лист и статус подачи документов</h1>
+        <h1>{t("shortlist.title")}</h1>
         <p className="subtitle">
-          Формируй сбалансированный портфель поступления: целевые программы, амбициозные гранты и надёжные запасные варианты.
+          {t("shortlist.description")}
         </p>
 
         {/* View Toggle Tabs */}

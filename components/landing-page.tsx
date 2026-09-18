@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { AuthModal } from './screens/auth-modal';
+import { useI18n } from './i18n-provider';
 
 interface University {
   id: string;
@@ -95,6 +96,7 @@ export interface LandingPageProps {
 }
 
 export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profile, onLogout }: LandingPageProps = {}) {
+  const { t } = useI18n();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -255,7 +257,7 @@ export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profil
                       <div style={{ padding: '8px 12px 6px', borderBottom: '1px solid #F0F2F5' }}>
                         <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#040915' }}>{profile?.name}</div>
                         <div style={{ fontSize: '11px', color: '#6A798B', marginTop: '2px' }}>
-                          ЕНТ: {profile?.unt ?? '—'} • {profile?.grade || '11 класс'}
+                          {t("landing.user.score", { unt: profile?.unt ?? "—", grade: profile?.grade || "11" })}
                         </div>
                       </div>
                       <button
@@ -280,7 +282,7 @@ export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profil
                         onMouseEnter={(e) => (e.currentTarget.style.background = '#F4F5F7')}
                         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                       >
-                        📊 Мой личный кабинет
+                        {t("landing.user.dashboard")}
                       </button>
                       <button
                         type="button"
@@ -303,7 +305,7 @@ export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profil
                         onMouseEnter={(e) => (e.currentTarget.style.background = '#F4F5F7')}
                         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                       >
-                        🎯 Мой маршрут поступления
+                        {t("landing.user.route")}
                       </button>
                       <button
                         type="button"
@@ -326,7 +328,7 @@ export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profil
                         onMouseEnter={(e) => (e.currentTarget.style.background = '#F4F5F7')}
                         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                       >
-                        ✏️ Изменить баллы / анкету
+                        {t("landing.user.edit")}
                       </button>
                       <button
                         type="button"
@@ -351,7 +353,7 @@ export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profil
                         onMouseEnter={(e) => (e.currentTarget.style.background = '#FEF2F2')}
                         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                       >
-                        🚪 Выйти из аккаунта
+                        {t("landing.user.logout")}
                       </button>
                     </div>
                   )}
@@ -385,7 +387,7 @@ export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profil
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }}
                 >
-                  Войти
+                  {t("nav.login")}
                 </button>
               )}
 
@@ -402,21 +404,7 @@ export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profil
                 }}
               >
                 <div className="btn-text">
-                  {isLoggedIn ? (
-                    <span className="tricksword">
-                      <span className="letter">В</span>{' '}
-                      <span className="letter">к</span><span className="letter">а</span><span className="letter">б</span><span className="letter">и</span><span className="letter">н</span><span className="letter">е</span><span className="letter">т</span>
-                    </span>
-                  ) : (
-                    <>
-                      <span className="tricksword">
-                        <span className="letter">П</span><span className="letter">о</span><span className="letter">с</span><span className="letter">т</span><span className="letter">р</span><span className="letter">о</span><span className="letter">и</span><span className="letter">т</span><span className="letter">ь</span>
-                      </span>{' '}
-                      <span className="tricksword">
-                        <span className="letter">м</span><span className="letter">а</span><span className="letter">р</span><span className="letter">ш</span><span className="letter">р</span><span className="letter">у</span><span className="letter">т</span>
-                      </span>
-                    </>
-                  )}
+                  {isLoggedIn ? t("nav.account") : t("landing.hero.cta")}
                 </div>
               </a>
             </div>
@@ -425,19 +413,19 @@ export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profil
           <div className="container flex-cc-h is--navlinks" style={{ width: 'auto', left: '50%', transform: 'translateX(-50%)' }}>
             <div className="navlinks">
               <a href="#diagnosis" onClick={(e) => handleNav('dashboard', 'diagnosis', e)} className="navlink _1">
-                Диагностика
+                {t("nav.diagnostics")}
               </a>
               <a href="#recommendations" onClick={(e) => handleNav('results', 'recommendations', e)} className="navlink _2">
-                Подбор ВУЗов
+                {t("nav.recommendations")}
               </a>
               <a href="#compare" onClick={(e) => handleNav('compare', 'compare', e)} className="navlink _3">
-                Сравнение
+                {t("nav.compare")}
               </a>
               <a href="#roadmap" onClick={(e) => handleNav('roadmap', 'roadmap', e)} className="navlink _4">
-                Роадмап
+                {t("nav.roadmap")}
               </a>
               <a href="#action" onClick={(e) => handleNav('dashboard', 'action', e)} className="navlink last">
-                Следующий шаг
+                {t("nav.nextStep")}
               </a>
             </div>
           </div>
@@ -452,21 +440,21 @@ export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profil
               <div className="hero-heading-line-wrapper top">
                 <div className="div-hide hanging-text">
                   <h1 className="super-text">
-                    <span className="hero-heading-move _1">Твой путь</span> к университету
+                    <span className="hero-heading-move _1">{t("landing.hero.line1")}</span>
                   </h1>
                 </div>
               </div>
               <div className="hero-heading-line-wrapper btm">
                 <div className="div-hide inline hanging-text">
                   <h1 className="super-text">
-                    — <span className="hero-heading-move _2">в одном месте</span>
+                    <span className="hero-heading-move _2">{t("landing.hero.line2")}</span>
                   </h1>
                 </div>
               </div>
             </div>
 
             <p style={{ maxWidth: '680px', textAlign: 'center', color: '#4a5768', fontSize: '18px', margin: '20px auto 32px', lineHeight: 1.6 }}>
-              Узнай, какие направления и университеты подходят именно тебе, сравни варианты и получи персональный план поступления.
+              {t("landing.hero.description")}
             </p>
 
             <a
@@ -476,20 +464,20 @@ export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profil
               style={{ opacity: 1, textDecoration: 'none' }}
             >
               <div className="btn-text" style={{ fontSize: '16px', fontWeight: 700 }}>
-                Построить мой маршрут →
+                {t("landing.hero.cta")}
               </div>
             </a>
 
             <div style={{ marginTop: '20px', fontSize: '13.5px', fontWeight: 700, color: '#64748b', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <span>Профиль</span>
+              <span>{t("landing.flow.profile")}</span>
               <span style={{ color: '#FE7505', opacity: 0.8 }}>→</span>
-              <span>Подбор</span>
+              <span>{t("landing.flow.match")}</span>
               <span style={{ color: '#FE7505', opacity: 0.8 }}>→</span>
-              <span>Сравнение</span>
+              <span>{t("landing.flow.compare")}</span>
               <span style={{ color: '#FE7505', opacity: 0.8 }}>→</span>
-              <span>План</span>
+              <span>{t("landing.flow.plan")}</span>
               <span style={{ color: '#FE7505', opacity: 0.8 }}>→</span>
-              <span>Следующий шаг</span>
+              <span>{t("landing.flow.next")}</span>
             </div>
           </div>
 

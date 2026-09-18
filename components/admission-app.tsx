@@ -38,6 +38,7 @@ import { ExploreView } from "@/components/screens/explore-view";
 import { ShortlistView } from "@/components/screens/shortlist-view";
 import { DashboardView } from "@/components/screens/dashboard-view";
 import { LandingPage } from "@/components/landing-page";
+import { LanguageSwitcher, useI18n } from "@/components/i18n-provider";
 
 export type Screen =
   | "landing"
@@ -241,7 +242,6 @@ const demoProfiles: Record<string, StudentProfile> = {
   },
 };
 
-const wizardSteps = ["О тебе", "Направления & ЕНТ", "Академика (GPA 4.0)", "Бюджет и критерии", "Проверка"];
 const subjects = [
   "Математика",
   "Информатика",
@@ -290,6 +290,7 @@ function Logo() {
 }
 
 export function AdmissionApp() {
+  const { t } = useI18n();
   const [mounted, setMounted] = useState(false);
   const [screen, setScreen] = useState<Screen>("landing");
   const [profile, setProfile] = useState<StudentProfile>(defaultProfile);
@@ -445,6 +446,7 @@ export function AdmissionApp() {
 
   return (
     <div className="app-shell">
+      <LanguageSwitcher />
       {/* Top Navigation Bar (Active only in App Screens) */}
       {screen !== "landing" && (
         <header className="topbar">
@@ -458,31 +460,31 @@ export function AdmissionApp() {
             {inProduct ? (
               <nav className={`product-nav ${mobileMenuOpen ? "mobile-open" : ""}`} aria-label="Разделы навигатора">
                 <button className={screen === "dashboard" ? "active" : ""} onClick={() => navigate("dashboard")}>
-                  Обзор
+                  {t("nav.overview")}
                 </button>
                 <button className={screen === "results" ? "active" : ""} onClick={() => navigate("results")}>
-                  Рекомендации
+                  {t("nav.recommendations")}
                 </button>
                 <button className={screen === "explore" ? "active" : ""} onClick={() => navigate("explore")}>
-                  Каталог
+                  {t("nav.catalog")}
                 </button>
                 <button className={screen === "compare" ? "active" : ""} onClick={() => navigate("compare")}>
-                  Сравнение
+                  {t("nav.compare")}
                 </button>
                 <button className={screen === "shortlist" ? "active" : ""} onClick={() => navigate("shortlist")}>
-                  Шорт-лист {shortlist.length > 0 && <span className="nav-badge">{shortlist.length}</span>}
+                  {t("nav.shortlist")} {shortlist.length > 0 && <span className="nav-badge">{shortlist.length}</span>}
                 </button>
                 <button className={screen === "roadmap" ? "active" : ""} onClick={() => navigate("roadmap")}>
-                  Маршрут
+                  {t("nav.roadmap")}
                 </button>
                 <button className={screen === "what-if" ? "active" : ""} onClick={() => navigate("what-if")}>
-                  ⚡ Что если?
+                  ⚡ {t("nav.whatIf")}
                 </button>
               </nav>
             ) : (
               <nav className={`landing-nav ${mobileMenuOpen ? "mobile-open" : ""}`} aria-label="Навигация">
-                <button className="navlink" onClick={() => navigate("explore")}>Каталог вузов</button>
-                <button className="navlink" onClick={() => navigate("what-if")}>Симулятор шансов</button>
+                <button className="navlink" onClick={() => navigate("explore")}>{t("nav.catalog")}</button>
+                <button className="navlink" onClick={() => navigate("what-if")}>{t("nav.whatIf")}</button>
               </nav>
             )}
 
@@ -490,7 +492,7 @@ export function AdmissionApp() {
               {!inProduct ? (
                 <div className="landing-topbar-actions">
                   <button className="btn nav-ghost" onClick={() => loadDemo("aliya")}>
-                    Демо-кабинет
+                    {t("nav.demo")}
                   </button>
                   <button
                     className="btn btn-gradient nav-cta"
@@ -499,7 +501,7 @@ export function AdmissionApp() {
                       navigate(profile.name ? "dashboard" : "onboarding");
                     }}
                   >
-                    {profile.name ? "Мой кабинет" : "Подобрать вуз"}
+                    {profile.name ? t("nav.account") : t("nav.choose")}
                   </button>
                 </div>
               ) : (
@@ -514,7 +516,7 @@ export function AdmissionApp() {
                     style={{ fontSize: "12px", color: "#EF4444", padding: "4px 8px" }}
                     title="Выйти из аккаунта"
                   >
-                    Выйти
+                    {t("nav.logout")}
                   </button>
                 </>
               )}
@@ -706,8 +708,16 @@ function OnboardingScreen({
   onCancel: () => void;
   onComplete: () => void;
 }) {
+  const { t } = useI18n();
   const [step, setStep] = useState(0);
   const [activeCategory, setActiveCategory] = useState<string>("all");
+  const wizardSteps = [
+    t("wizard.step.about"),
+    t("wizard.step.direction"),
+    t("wizard.step.academic"),
+    t("wizard.step.preferences"),
+    t("wizard.step.review"),
+  ];
 
   const patch = (values: Partial<StudentProfile>) => setProfile({ ...profile, ...values });
 
@@ -752,7 +762,7 @@ function OnboardingScreen({
   return (
     <main className="onboarding container">
       {/* Step Progress bar */}
-      <div className="wizard-progress" aria-label={`Шаг ${step + 1} из ${wizardSteps.length}`}>
+      <div className="wizard-progress" aria-label={t("wizard.counter", { current: step + 1, total: wizardSteps.length })}>
         {wizardSteps.map((label, index) => (
           <div
             className={`wizard-progress-item ${index < step ? "done" : ""} ${index === step ? "active" : ""}`}
@@ -768,28 +778,8 @@ function OnboardingScreen({
       <div className="wizard-shell">
         <aside className="wizard-aside card-glass">
           <div className="aside-number">0{step + 1}</div>
-          <p>
-            {step === 0
-              ? "Базовая информация"
-              : step === 1
-              ? "Специальности & ЕНТ"
-              : step === 2
-              ? "Академический профиль"
-              : step === 3
-              ? "Бюджет и критерии"
-              : "Проверка данных"}
-          </p>
-          <h2>
-            {step === 0
-              ? "Кто ты и когда планируешь поступать?"
-              : step === 1
-              ? "Выбери до 3 направлений (как на Niche)"
-              : step === 2
-              ? "Средний балл GPA (4.0) и результаты экзаменов"
-              : step === 3
-              ? "Где и на каких условиях хочешь учиться?"
-              : "Твой профиль сформирован!"}
-          </h2>
+          <p>{t(`wizard.kicker.${step}`)}</p>
+          <h2>{t(`wizard.heading.${step}`)}</h2>
           <div className="aside-tip">
             <SparkIcon size={16} />
             <span>
@@ -810,7 +800,7 @@ function OnboardingScreen({
             <div className="form-stack">
               <div className="question-block">
                 <label htmlFor="name">
-                  Как тебя зовут? <small>для персонализации маршрута</small>
+                  {t("wizard.name")} <small>для персонализации маршрута</small>
                 </label>
                 <input
                   id="name"
@@ -822,7 +812,7 @@ function OnboardingScreen({
               </div>
 
               <div className="question-block">
-                <label>Текущий класс / статус</label>
+                <label>{t("wizard.status")}</label>
                 <div className="segmented-grid">
                   {(["9", "10", "11", "Выпускник школы", "Студент колледжа"] as const).map((val) => (
                     <button
@@ -839,7 +829,7 @@ function OnboardingScreen({
 
               <div className="form-row">
                 <div className="question-block">
-                  <label htmlFor="city-select">Родной город в Казахстане</label>
+                  <label htmlFor="city-select">{t("wizard.homeCity")}</label>
                   <div className="city-input-select-group">
                     <select
                       id="city-select"
@@ -893,7 +883,7 @@ function OnboardingScreen({
 
                 <div className="question-block">
                   <label htmlFor="year">
-                    Год поступления <small>(авторасчёт)</small>
+                    {t("wizard.enrollmentYear")} <small>(авторасчёт)</small>
                   </label>
                   <select
                     id="year"
@@ -917,7 +907,7 @@ function OnboardingScreen({
               <div className="question-block">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
                   <label style={{ margin: 0 }}>
-                    Выбери профессиональные сферы и направления <small>(до 3)</small>
+                    {t("wizard.directions")} <small>(до 3)</small>
                   </label>
                   <span
                     style={{
@@ -933,7 +923,7 @@ function OnboardingScreen({
                       color: selectedInterests.length === 3 ? "#10b981" : "inherit",
                     }}
                   >
-                    Выбрано: <strong>{selectedInterests.length}</strong> из 3
+                    {t("wizard.selected", { current: selectedInterests.length })}
                   </span>
                 </div>
                 <p className="field-hint">
@@ -1001,7 +991,7 @@ function OnboardingScreen({
               {/* UNT SUBJECT COMBINATION */}
               <div className="question-block" style={{ marginTop: "20px" }}>
                 <label>
-                  Профильная комбинация предметов ЕНТ <small>критично для конкурса грантов РК</small>
+                  {t("wizard.untCombination")} <small>критично для конкурса грантов РК</small>
                 </label>
                 <div className="unt-comb-picker-grid">
                   {untCombinationsList.map((comb) => (
@@ -1020,7 +1010,7 @@ function OnboardingScreen({
 
               <div className="question-block">
                 <label>
-                  Любимые предметы в школе <small>до 3</small>
+                  {t("wizard.subjects")} <small>до 3</small>
                 </label>
                 <div className="chip-list">
                   {subjects.map((sub) => {
@@ -1055,7 +1045,7 @@ function OnboardingScreen({
               <div className="metric-input">
                 <div>
                   <label htmlFor="gpa">
-                    Средний балл GPA <small>(шкала 4.0)</small>
+                    {t("wizard.gpa")} <small>(4.0)</small>
                   </label>
                   <p>Стандарт НИШ, БИЛ, лицеев и аттестатов РК (3.8–4.0 — отлично; 3.3–3.7 — хорошо)</p>
                 </div>
@@ -1075,7 +1065,7 @@ function OnboardingScreen({
 
               <div className="metric-input">
                 <div>
-                  <label htmlFor="unt">Балл ЕНТ (пробный или итоговый)</label>
+                  <label htmlFor="unt">{t("wizard.unt")}</label>
                   <p>Максимум 140 баллов. Если ещё не сдавал, оставь пустым — включим в план.</p>
                 </div>
                 <div className="number-field">
@@ -1094,7 +1084,7 @@ function OnboardingScreen({
 
               <div className="metric-input">
                 <div>
-                  <label htmlFor="ielts">Сертификат IELTS (если есть)</label>
+                  <label htmlFor="ielts">{t("wizard.ielts")}</label>
                   <p>Большинство казахстанских вузов проводят также внутренний экзамен AET/KEET.</p>
                 </div>
                 <div className="number-field">
@@ -1114,7 +1104,7 @@ function OnboardingScreen({
 
               <div className="metric-input">
                 <div>
-                  <label htmlFor="sat">Тест SAT / ACT Reasoning <small>(для NU и зарубежных программ)</small></label>
+                  <label htmlFor="sat">{t("wizard.sat")}</label>
                   <p>Шкала SAT от 400 до 1600. Полезно для Назарбаев Университета и вузов Европы/США.</p>
                 </div>
                 <div className="number-field">
@@ -1138,7 +1128,7 @@ function OnboardingScreen({
           {step === 3 && (
             <div className="form-stack compact">
               <div className="question-block">
-                <label>В каких городах хочешь учиться?</label>
+                <label>{t("wizard.cities")}</label>
                 <div className="chip-list">
                   {studyCities.map((city) => {
                     const active = profile.preferredCities.includes(city);
@@ -1170,7 +1160,7 @@ function OnboardingScreen({
                 <div className="grant-first-row">
                   <label className="toggle-row">
                     <span>
-                      <strong>Рассматриваю только государственный грант (0 ₸)</strong>
+                      <strong>{t("wizard.grantOnly")}</strong>
                       <small>Фокус исключительно на траекториях бесплатного обучения</small>
                     </span>
                     <input
@@ -1185,7 +1175,7 @@ function OnboardingScreen({
                 {!profile.onlyGrant && (
                   <>
                     <label style={{ marginTop: "12px", display: "block" }}>
-                      Или допустимый годовой бюджет на платное обучение:
+                      {t("wizard.budget")}:
                     </label>
                     <div className="budget-grid">
                       {[1_200_000, 1_600_000, 2_500_000, 3_500_000, 7_500_000].map((b) => (
@@ -1207,7 +1197,7 @@ function OnboardingScreen({
 
               <div className="form-row">
                 <div className="question-block">
-                  <label htmlFor="lang">Язык обучения</label>
+                  <label htmlFor="lang">{t("wizard.studyLanguage")}</label>
                   <select
                     id="lang"
                     className="text-input"
@@ -1221,7 +1211,7 @@ function OnboardingScreen({
                 </div>
 
                 <div className="question-block">
-                  <label htmlFor="focus">Карьерные амбиции</label>
+                  <label htmlFor="focus">{t("wizard.career")}</label>
                   <select
                     id="focus"
                     className="text-input"
@@ -1239,7 +1229,7 @@ function OnboardingScreen({
 
               {/* ADDITIONAL CONSTRAINTS */}
               <div className="question-block" style={{ marginTop: "12px" }}>
-                <label>Дополнительные условия и инфраструктура:</label>
+                <label>{t("wizard.infrastructure")}:</label>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px", marginTop: "8px" }}>
                   <label className="toggle-row" style={{ padding: "10px", borderRadius: "10px", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
                     <span>
@@ -1279,14 +1269,14 @@ function OnboardingScreen({
                   {selectedInterests.map((k) => interestLabels[k]?.title || k).join(" • ")}
                 </strong>
                 <button type="button" onClick={() => setStep(1)}>
-                  Изменить
+                  {t("wizard.edit")}
                 </button>
               </article>
               <article>
                 <span>Предметы ЕНТ</span>
                 <strong>{profile.untCombination}</strong>
                 <button type="button" onClick={() => setStep(1)}>
-                  Изменить
+                  {t("wizard.edit")}
                 </button>
               </article>
               <article>
@@ -1295,7 +1285,7 @@ function OnboardingScreen({
                   {profile.grade.includes("класс") || profile.grade.length > 2 ? profile.grade : `${profile.grade} класс`} • GPA {profile.gpa.toFixed(2)}/4.0 • ЕНТ {profile.unt ?? "не сдан"} {profile.sat ? `• SAT ${profile.sat}` : ""}
                 </strong>
                 <button type="button" onClick={() => setStep(2)}>
-                  Изменить
+                  {t("wizard.edit")}
                 </button>
               </article>
               <article>
@@ -1304,7 +1294,7 @@ function OnboardingScreen({
                   {profile.onlyGrant ? "Только госгрант (0 ₸)" : `${formatMoney(profile.budget)} / год`} • {profile.preferredCities.join(", ")}
                 </strong>
                 <button type="button" onClick={() => setStep(3)}>
-                  Изменить
+                  {t("wizard.edit")}
                 </button>
               </article>
               <article>
@@ -1313,14 +1303,14 @@ function OnboardingScreen({
                   {profile.language} • {profile.dormitoryNeeded ? "С общежитием" : "Без общежития"} {profile.militaryDepartment ? "• Воен. кафедра" : ""}
                 </strong>
                 <button type="button" onClick={() => setStep(3)}>
-                  Изменить
+                  {t("wizard.edit")}
                 </button>
               </article>
               <article>
                 <span>Выпуск и приём</span>
                 <strong>Лето {profile.enrollmentYear} года</strong>
                 <button type="button" onClick={() => setStep(0)}>
-                  Изменить
+                  {t("wizard.edit")}
                 </button>
               </article>
             </div>
@@ -1328,17 +1318,17 @@ function OnboardingScreen({
 
           <div className="wizard-footer">
             <button type="button" className="button subtle" onClick={back}>
-              <Chevron direction="left" /> Назад
+              <Chevron direction="left" /> {t("wizard.back")}
             </button>
-            <span>Шаг {step + 1} из 5</span>
+            <span>{t("wizard.counter", { current: step + 1, total: 5 })}</span>
             <button type="button" className="button primary" disabled={!canContinue} onClick={next}>
               {step === 4 ? (
                 <>
-                  <SparkIcon /> Построить персональный маршрут
+                  <SparkIcon /> {t("wizard.build")}
                 </>
               ) : (
                 <>
-                  Продолжить <Chevron />
+                  {t("wizard.continue")} <Chevron />
                 </>
               )}
             </button>
@@ -1378,8 +1368,31 @@ function ResultsScreen({
   onViewProgram: (id: string) => void;
   onOpenWhatIf: () => void;
 }) {
+  const { t, locale } = useI18n();
   const readiness = profileReadiness(profile);
   const [expandedId, setExpandedId] = useState<string | null>(matches[0]?.program.id ?? null);
+  const [aiRecommendation, setAiRecommendation] = useState<string | null>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const requestAiRecommendation = async () => {
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const response = await fetch("/api/ai-advisor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-uniflow-locale": locale },
+        body: JSON.stringify({ taskType: "recommendations", studentProfile: profile, locale }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || t("results.aiError"));
+      setAiRecommendation(data.response);
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : t("results.aiError"));
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const profileInterests: Interest[] =
     profile.interests && profile.interests.length > 0
@@ -1430,10 +1443,10 @@ function ResultsScreen({
       <section className="results-intro">
         <div>
           <div className="eyebrow-pill">
-            <SparkIcon size={14} /> Результаты мэтчинга и объективная диагностика
+            <SparkIcon size={14} /> {t("results.kicker")}
           </div>
           <h1>
-            {profile.name ? `${profile.name}, ` : ""}вот твой персональный вектор поступления
+            {t("results.title", { name: profile.name ? `${profile.name}, ` : "" })}
           </h1>
           <p className="subtitle">
             Мы сопоставили твои направления ({profileInterests.map((k) => interestLabels[k]?.title || k).join(", ")}), комбинацию предметов ЕНТ ({profile.untCombination}), GPA {profile.gpa.toFixed(2)}/4.0 и
@@ -1503,7 +1516,7 @@ function ResultsScreen({
             {profile.militaryDepartment && <i>Воен. кафедра</i>}
           </div>
           <button className="button subtle small edit-btn" onClick={onEdit}>
-            ✎ Редактировать профиль
+            ✎ {t("results.edit")}
           </button>
         </article>
       </section>
@@ -1512,19 +1525,29 @@ function ResultsScreen({
       <section className="matches-section">
         <div className="section-heading">
           <div>
-            <p className="section-kicker">РЕКОМЕНДОВАННЫЙ ТОП ПРОГРАММ</p>
-            <h2>Лучшие университеты Казахстана для твоего выбора</h2>
-            <p>Диверсифицированная подборка (не более одной программы от одного вуза в топе).</p>
+            <p className="section-kicker">{t("results.topKicker")}</p>
+            <h2>{t("results.topTitle")}</h2>
+            <p>{t("results.topDescription")}</p>
           </div>
           <div className="header-actions-group">
             <button className="button ghost small" onClick={onOpenWhatIf}>
-              <SlidersIcon size={14} /> Симулятор «Что если?»
+              <SlidersIcon size={14} /> {t("results.whatIf")}
+            </button>
+            <button className="button primary small" onClick={requestAiRecommendation} disabled={aiLoading}>
+              <SparkIcon size={14} /> {aiLoading ? t("results.aiLoading") : t("results.aiButton")}
             </button>
             <button className="button outline small" onClick={onCompare}>
-              Сравнить варианты <Chevron size={14} />
+              {t("results.compare")} <Chevron size={14} />
             </button>
           </div>
         </div>
+
+        {(aiRecommendation || aiError) && (
+          <div className="ai-catalog-panel" role="status">
+            <strong>{t("results.aiTitle")}</strong>
+            <div>{aiRecommendation ?? aiError}</div>
+          </div>
+        )}
 
         <div className="matches-list">
           {matches.map((match, index) => {
@@ -1573,7 +1596,7 @@ function ResultsScreen({
 
                 <div className="match-columns">
                   <div className="why">
-                    <h4>Почему подходит твоему профилю</h4>
+                    <h4>{t("results.why")}</h4>
                     {match.reasons.slice(0, 3).map((reason) => (
                       <p key={reason}>
                         <i>
@@ -1585,12 +1608,12 @@ function ResultsScreen({
                   </div>
                   <div className="fact-box">
                     <div>
-                      <span>Стоимость</span>
+                      <span>{t("results.cost")}</span>
                       <strong>{match.program.tuitionLabel}</strong>
                       <ConfidenceBadge confidence={match.program.tuitionConfidence} />
                     </div>
                     <div>
-                      <span>Финансирование</span>
+                      <span>{t("results.funding")}</span>
                       <strong className={match.breakdown.budget >= 70 ? "text-success" : "text-warning"}>
                         {profile.onlyGrant
                           ? match.program.scholarship
@@ -1668,7 +1691,7 @@ function ResultsScreen({
                       className="text-button"
                       onClick={() => setExpandedId(isExpanded ? null : match.program.id)}
                     >
-                      {isExpanded ? "Скрыть детали" : "Подробнее о мэтче"}
+                      {isExpanded ? t("results.hideDetails") : t("results.details")}
                       <Chevron direction={isExpanded ? "down" : "right"} size={14} />
                     </button>
                     <button
@@ -1680,7 +1703,7 @@ function ResultsScreen({
                   </div>
 
                   <button className="button primary" onClick={() => onTarget(match.program.id)}>
-                    Выбрать целью маршрута <Chevron size={14} />
+                    {t("results.target")} <Chevron size={14} />
                   </button>
                 </div>
               </article>
@@ -1713,6 +1736,7 @@ function CompareScreen({
   onTarget: (id: string) => void;
   onViewProgram: (id: string) => void;
 }) {
+  const { t } = useI18n();
   const [leftId, setLeftId] = useState(defaultLeftId || matches[0]?.program.id || "");
   const [rightId, setRightId] = useState(
     matches.find((m) => m.program.id !== defaultLeftId)?.program.id || matches[1]?.program.id || ""
@@ -1771,7 +1795,7 @@ function CompareScreen({
         <div className="eyebrow-pill">
           <SparkIcon size={14} /> Инструмент осознанного выбора
         </div>
-        <h1>Сравнение двух программ Казахстана</h1>
+        <h1>{t("compare.title")}</h1>
         <p className="subtitle">
           Сопоставь требования, академическую нагрузку, финансовые затраты и перспективы трудоустройства.
         </p>
@@ -1878,6 +1902,7 @@ function RoadmapScreen({
   onChangeTarget: () => void;
   onViewDetails: () => void;
 }) {
+  const { t } = useI18n();
   const tasks = buildRoadmap(profile, match);
   const next = tasks.find((task) => !completed.includes(task.id));
   const progress = Math.round(
@@ -1898,7 +1923,7 @@ function RoadmapScreen({
           <div className="eyebrow-pill">
             <SparkIcon size={14} /> Персональный пошаговый маршрут
           </div>
-          <h1>Твой путь поступления в {match.program.shortName}</h1>
+          <h1>{t("roadmap.title", { university: match.program.shortName })}</h1>
           <p className="subtitle">
             {match.program.program} • Набор на осень {profile.enrollmentYear} года
           </p>

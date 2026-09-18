@@ -4,6 +4,7 @@ import { formatMoney } from "@/lib/matching";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { ConfidenceBadge } from "@/components/ui/confidence-badge";
 import { SearchIcon, BookmarkIcon, FilterIcon, MapPinIcon, Chevron } from "@/components/ui/icons";
+import { useI18n } from "@/components/i18n-provider";
 
 export function ExploreView({
   matches,
@@ -20,6 +21,7 @@ export function ExploreView({
   onViewProgram: (programId: string) => void;
   onCompareProgram: (programId: string) => void;
 }) {
+  const { t } = useI18n();
   const [search, setSearch] = useState("");
   const [selectedCity, setSelectedCity] = useState<string>("all");
   const [selectedInterest, setSelectedInterest] = useState<string>("all");
@@ -80,11 +82,11 @@ export function ExploreView({
       {/* Header */}
       <div className="section-heading-block">
         <div className="eyebrow-pill">
-          <SearchIcon size={14} /> Каталог образовательных программ Казахстана
+          <SearchIcon size={14} /> {t("explore.kicker")}
         </div>
-        <h1>Все аккредитованные IT и инженерные программы РК</h1>
+        <h1>{t("explore.title")}</h1>
         <p className="subtitle">
-          База из {matches.length} программ: фильтруй по профильным предметам ЕНТ, городам Казахстана, стоимости и языку обучения.
+          {t("explore.description")} ({matches.length})
         </p>
       </div>
 

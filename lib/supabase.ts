@@ -1,9 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import type { StudentProfile, ShortlistItem, ApplicationItem } from "./types";
 
-export const SUPABASE_URL = "https://hhtvbdxbfsvrgnpjfmag.supabase.co";
-export const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhodHZiZHhiZnN2cmducGpmbWFnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk3MzQzMjMsImV4cCI6MjEwNTMxMDMyM30.UBGw2Nmt97drKMcpEEEevfA7a10lbEsb4CB8gwFWh6Q";
+export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error("NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be configured");
+}
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -51,10 +54,19 @@ export function saveLocalState(state: SyncState) {
 export async function syncToCloud(state: SyncState): Promise<{ success: boolean; cloudSynced: boolean; message: string }> {
   saveLocalState(state);
   try {
-    // Attempt upsert into uniflow_profiles table if configured
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    // Guests stay entirely in localStorage. Besides avoiding unnecessary
+    // requests, this prevents anonymous users from writing shared demo rows.
+    if (!user) {
+      return { success: true, cloudSynced: false, message: "Гостевой режим: сохранено локально" };
+    }
+
     const { error } = await supabase.from("uniflow_profiles").upsert(
       {
-        id: state.profile?.name ? `profile_${encodeURIComponent(state.profile.name.toLowerCase().trim())}` : "demo_user",
+        id: user.id,
         profile_data: state.profile,
         target_id: state.targetId,
         completed_tasks: state.completed,
@@ -66,7 +78,7 @@ export async function syncToCloud(state: SyncState): Promise<{ success: boolean;
     );
 
     if (error) {
-      // Table doesn't exist yet or permission error, local state is securely saved
+      // If the migration has not been applied yet, the local copy is retained.
       return { success: true, cloudSynced: false, message: "Локально сохранено (Supabase таблица ещё не создана)" };
     }
     return { success: true, cloudSynced: true, message: "Синхронизировано с Supabase Cloud" };

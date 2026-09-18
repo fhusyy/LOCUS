@@ -4,6 +4,7 @@ import { formatMoney, categorizeProgram } from "@/lib/matching";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { ConfidenceBadge, CategoryBadge } from "@/components/ui/confidence-badge";
 import { CheckIcon, CloseIcon, ExternalLinkIcon, MapPinIcon, BookmarkIcon } from "@/components/ui/icons";
+import { useI18n } from "@/components/i18n-provider";
 
 export function UniversityModal({
   program,
@@ -24,6 +25,7 @@ export function UniversityModal({
   onToggleShortlist: () => void;
   onSetTarget: () => void;
 }) {
+  const { t, locale } = useI18n();
   const category = match ? categorizeProgram(profile, match) : "target";
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAdvisorText, setAiAdvisorText] = useState<string | null>(null);
@@ -33,11 +35,13 @@ export function UniversityModal({
       setAiLoading(true);
       const res = await fetch("/api/ai-advisor", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-uniflow-locale": locale },
         body: JSON.stringify({
           taskType: "why_fits",
+          locale,
           studentProfile: profile,
           targetProgram: {
+            id: program.id,
             name: program.program,
             university: program.university,
           },
@@ -47,10 +51,11 @@ export function UniversityModal({
       if (data.success) {
         setAiAdvisorText(data.response);
       } else {
-        setAiAdvisorText("Не удалось получить ответ от Gemini: " + (data.error || "ошибка сети"));
+        setAiAdvisorText(data.error || t("results.aiError"));
       }
-    } catch (err: any) {
-      setAiAdvisorText("Ошибка при обращении к AI-советнику: " + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : t("results.aiError");
+      setAiAdvisorText(`${t("ai.connectionError")}: ${message}`);
     } finally {
       setAiLoading(false);
     }
@@ -76,7 +81,7 @@ export function UniversityModal({
               </p>
             </div>
           </div>
-          <button className="icon-button close-button" onClick={onClose} aria-label="Закрыть">
+          <button className="icon-button close-button" onClick={onClose} aria-label={t("modal.close")}>
             <CloseIcon size={20} />
           </button>
         </div>
@@ -151,7 +156,7 @@ export function UniversityModal({
                   disabled={aiLoading}
                   onClick={handleAskGemini}
                 >
-                  ✨ {aiLoading ? "Gemini анализирует..." : "Спросить Google Gemini AI"}
+                  ✨ {aiLoading ? t("ai.loading") : t("ai.ask")}
                 </button>
               </div>
 
@@ -170,7 +175,7 @@ export function UniversityModal({
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", color: "#fe7505", fontWeight: 800, fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                    <span>⚡ AI-экспертиза Google Gemini 2.5 Flash</span>
+                    <span>⚡ {t("ai.expertise")}</span>
                   </div>
                   <div style={{ whiteSpace: "pre-wrap" }}>{aiAdvisorText}</div>
                 </div>

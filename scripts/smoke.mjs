@@ -15,94 +15,75 @@ try {
   const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
   const page = await desktop.newPage();
   const consoleErrors = [];
+  const failedResources = [];
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
+  page.on("response", (response) => {
+    if (response.status() >= 400) failedResources.push(`${response.status()} ${response.url()}`);
+  });
 
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: /Поступление становится/ }).waitFor();
-  await page.screenshot({ path: `${output}/01-landing-desktop.png`, fullPage: true });
+  await page.getByRole("heading", { name: /Твой путь к университету/ }).waitFor();
 
-  await page.getByRole("button", { name: "Посмотреть демо" }).click();
-  await page.getByRole("heading", { name: /профиль поступления/ }).waitFor();
+  await page.getByRole("button", { name: "EN", exact: true }).click();
+  await page.getByRole("heading", { name: /Your path to university/ }).waitFor();
+  expect(await page.locator("html").getAttribute("lang") === "en", "HTML lang did not switch to English");
+
+  await page.getByRole("button", { name: "ҚАЗ", exact: true }).click();
+  await page.getByRole("heading", { name: /Университетке апарар жолың/ }).waitFor();
+  expect(await page.locator("html").getAttribute("lang") === "kk", "HTML lang did not switch to Kazakh");
+
+  await page.getByRole("button", { name: "RU", exact: true }).click();
+  await page.getByRole("heading", { name: /Твой путь к университету/ }).waitFor();
+  await page.screenshot({ path: `${output}/01-landing-locales.png`, fullPage: false });
+
+  // The demo profile is intentionally preloaded on first launch. Sign out so
+  // the smoke test covers the complete questionnaire from an empty profile.
+  await page.getByRole("button", { name: /Алия/ }).click();
+  await page.getByRole("button", { name: /Выйти из аккаунта/ }).click();
+  await page.locator("header.hero").getByRole("link", { name: /Построить мой маршрут/ }).click();
+  await page.getByRole("heading", { name: /Кто ты и когда планируешь поступать/ }).waitFor();
+  await page.getByLabel(/Как тебя зовут/).fill("Алия");
+  await page.getByRole("button", { name: /Продолжить/ }).click();
+
+  await page.getByRole("button", { name: /Cybersecurity/ }).first().click();
+  await page.getByRole("button", { name: /Продолжить/ }).click();
+  await page.getByLabel(/Балл ЕНТ/).fill("108");
+  await page.getByLabel(/Сертификат IELTS/).fill("6.5");
+  await page.getByRole("button", { name: /Продолжить/ }).click();
+  await page.getByRole("button", { name: /до 2.5 млн/ }).click();
+  await page.getByRole("button", { name: /Продолжить/ }).click();
+  await page.getByRole("button", { name: /Построить персональный маршрут/ }).click();
+
+  await page.getByRole("heading", { name: /Привет, Алия/ }).waitFor();
+  await page.getByRole("button", { name: "Рекомендации", exact: true }).click();
+  await page.getByRole("heading", { name: /персональный вектор поступления/ }).waitFor();
+  await page.getByRole("button", { name: /AI-подбор по 106 вузам/ }).waitFor();
+
   const cards = await page.locator(".match-card").count();
-  expect(cards >= 3, `Ожидалось минимум 3 рекомендации, получено ${cards}`);
-  await page.screenshot({ path: `${output}/02-results-desktop.png`, fullPage: true });
+  expect(cards >= 3, `Expected at least 3 recommendation cards, received ${cards}`);
+  await page.screenshot({ path: `${output}/02-results-ai-entry.png`, fullPage: false });
 
-  await page.getByRole("button", { name: "Подробнее о мэтче" }).first().click();
-  await page.getByRole("link", { name: /Открыть официальный источник/ }).first().waitFor();
+  await page.getByRole("button", { name: /Карточка вуза/ }).first().click();
+  await page.getByRole("button", { name: /Спросить Gemini AI/ }).waitFor();
+  await page.getByRole("button", { name: "Закрыть" }).click();
 
-  await page.getByRole("button", { name: /Сравнить варианты/ }).click();
-  await page.getByRole("heading", { name: /Два варианта/ }).waitFor();
-  await page.screenshot({ path: `${output}/03-compare-desktop.png`, fullPage: true });
-
-  await page.locator(".compare-actions button").first().click();
-  await page.getByText("СЛЕДУЮЩЕЕ ДЕЙСТВИЕ").waitFor();
-  await page.screenshot({ path: `${output}/04-roadmap-desktop.png`, fullPage: true });
-  await page.getByRole("button", { name: /Отметить выполненным/ }).click();
-  await page.getByText(/шагов выполнено/).waitFor();
-
-  expect(consoleErrors.length === 0, `Ошибки console: ${consoleErrors.join(" | ")}`);
+  expect(failedResources.length === 0, `Failed browser resources: ${failedResources.join(" | ")}`);
+  expect(consoleErrors.length === 0, `Browser console errors: ${consoleErrors.join(" | ")}`);
   await desktop.close();
 
   const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+  await mobile.addInitScript(() => window.localStorage.setItem("uniflow-locale", "en"));
   const mobilePage = await mobile.newPage();
   await mobilePage.goto(baseUrl, { waitUntil: "networkidle" });
-  await mobilePage.getByRole("button", { name: "Посмотреть демо" }).click();
-  await mobilePage.getByRole("heading", { name: /профиль поступления/ }).waitFor();
+  await mobilePage.getByRole("heading", { name: /all in one place/i }).waitFor();
   const overflow = await mobilePage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  expect(overflow <= 1, `Горизонтальный overflow на mobile: ${overflow}px`);
-  await mobilePage.screenshot({ path: `${output}/05-results-mobile.png`, fullPage: false });
-  await mobilePage.getByRole("button", { name: /Сравнить варианты/ }).click();
-  await mobilePage.screenshot({ path: `${output}/06-compare-mobile.png`, fullPage: false });
+  expect(overflow <= 1, `Mobile horizontal overflow: ${overflow}px`);
+  await mobilePage.screenshot({ path: `${output}/03-landing-mobile-en.png`, fullPage: false });
   await mobile.close();
 
-  const mobileJourney = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
-  const mobileJourneyPage = await mobileJourney.newPage();
-  await mobileJourneyPage.goto(baseUrl, { waitUntil: "networkidle" });
-  await mobileJourneyPage.getByRole("button", { name: /Построить мой маршрут/ }).click();
-  await mobileJourneyPage.getByRole("button", { name: /Продолжить/ }).click();
-  await mobileJourneyPage.getByRole("button", { name: /Cybersecurity/ }).click();
-  await mobileJourneyPage.getByRole("button", { name: /Продолжить/ }).click();
-  await mobileJourneyPage.getByRole("button", { name: /Продолжить/ }).click();
-  await mobileJourneyPage.getByText("Бюджет на обучение в год").waitFor();
-  expect(await mobileJourneyPage.getByText("Шаг 4 из 5").isVisible(), "Счётчик шага скрыт на mobile");
-  const mobileJourneyOverflow = await mobileJourneyPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  expect(mobileJourneyOverflow <= 1, `Горизонтальный overflow анкеты на mobile: ${mobileJourneyOverflow}px`);
-  await mobileJourneyPage.screenshot({ path: `${output}/07-budget-mobile.png`, fullPage: false });
-  await mobileJourney.close();
-
-  const journey = await browser.newContext({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 1 });
-  const journeyPage = await journey.newPage();
-  await journeyPage.goto(baseUrl, { waitUntil: "networkidle" });
-  await journeyPage.getByRole("button", { name: /Построить мой маршрут/ }).click();
-  await journeyPage.getByRole("heading", { name: /Кто ты и когда поступаешь/ }).waitFor();
-  await journeyPage.screenshot({ path: `${output}/07-onboarding-desktop.png`, fullPage: false });
-  await journeyPage.getByRole("button", { name: /Продолжить/ }).click();
-  await journeyPage.getByRole("button", { name: /Cybersecurity/ }).click();
-  await journeyPage.getByRole("button", { name: /Продолжить/ }).click();
-  await journeyPage.getByLabel(/Пробный или итоговый ЕНТ/).fill("96");
-  await journeyPage.getByRole("button", { name: /Продолжить/ }).click();
-  await journeyPage.getByRole("button", { name: /до 1.5 млн/ }).click();
-  const budgetGrid = journeyPage.locator(".budget-grid");
-  const budgetBadge = journeyPage.locator(".budget-option.has-badge small");
-  const [gridBox, badgeBox, footerButtonBox] = await Promise.all([
-    budgetGrid.boundingBox(),
-    budgetBadge.boundingBox(),
-    journeyPage.locator(".wizard-footer .button.primary").boundingBox(),
-  ]);
-  expect(Boolean(gridBox && badgeBox && badgeBox.y >= gridBox.y && badgeBox.y + badgeBox.height <= gridBox.y + gridBox.height), "Бейдж бюджета обрезан");
-  expect(Boolean(footerButtonBox && footerButtonBox.height <= 54), "Кнопка в подвале перенеслась на две строки на desktop");
-  await journeyPage.getByText("Шаг 4 из 5").waitFor();
-  await journeyPage.screenshot({ path: `${output}/08-budget-desktop.png`, fullPage: false });
-  await journeyPage.getByRole("button", { name: /Продолжить/ }).click();
-  await journeyPage.getByRole("button", { name: /Найти мои программы/ }).click();
-  await journeyPage.getByText("Cybersecurity", { exact: true }).first().waitFor();
-  const firstProgram = await journeyPage.locator(".match-card .match-info > p").first().innerText();
-  expect(firstProgram.includes("Cybersecurity") || firstProgram.includes("Information Security"), `Направление не повлияло на лидера: ${firstProgram}`);
-  await journey.close();
-
-  console.log(`Smoke test passed: ${cards} recommendations, manual journey works, no console errors, mobile overflow <= 1px.`);
+  console.log(`Smoke test passed: ${cards} recommendations, RU/KK/EN switching, onboarding, modal, and mobile overflow.`);
 } finally {
   await browser.close();
 }

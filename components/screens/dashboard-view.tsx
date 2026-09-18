@@ -3,6 +3,7 @@ import type { Match, StudentProfile, ShortlistItem, ApplicationItem } from "@/li
 import { formatMoney, profileReadiness, buildRoadmap } from "@/lib/matching";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { CheckIcon, SparkIcon, Chevron, BookmarkIcon, SlidersIcon } from "@/components/ui/icons";
+import { useI18n } from "@/components/i18n-provider";
 
 export function DashboardView({
   profile,
@@ -25,6 +26,7 @@ export function DashboardView({
   onViewProgram: (programId: string) => void;
   onEditProfile: () => void;
 }) {
+  const { t } = useI18n();
   const readiness = profileReadiness(profile);
   const tasks = buildRoadmap(profile, targetMatch);
   const nextTask = tasks.find((t) => !completedTasks.includes(t.id));
@@ -39,10 +41,10 @@ export function DashboardView({
         <div className="dash-hero-content">
           <div className="dash-greeting">
             <span className="eyebrow-pill">
-              <SparkIcon size={14} /> Личный кабинет абитуриента
+              <SparkIcon size={14} /> {t("dashboard.kicker")}
             </span>
             <h1>
-              {profile.name ? `Привет, ${profile.name}!` : "Привет, будущий студент!"}
+              {t("dashboard.hello", { name: profile.name || "future student" })}
             </h1>
             <p className="dash-sub">
               Твой персональный вектор: <b>{targetMatch.program.university}</b> ({targetMatch.program.program}). Мы
@@ -179,7 +181,7 @@ export function DashboardView({
       <div className="dash-recommendations-preview">
         <div className="preview-heading">
           <div>
-            <h2>Рекомендованные программы для твоего профиля</h2>
+            <h2>{t("dashboard.recommendations")}</h2>
             <p>Диверсифицированный топ лучших университетов Казахстана под твои параметры.</p>
           </div>
           <button className="button outline small" onClick={() => onNavigate("results")}>
