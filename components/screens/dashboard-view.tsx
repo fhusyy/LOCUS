@@ -39,7 +39,7 @@ export function DashboardView({
         <div className="dash-hero-content">
           <div className="dash-greeting">
             <span className="eyebrow-pill">
-              <SparkIcon size={14} /> Личный кабинет абитуриента 2027
+              <SparkIcon size={14} /> Личный кабинет абитуриента
             </span>
             <h1>
               {profile.name ? `Привет, ${profile.name}!` : "Привет, будущий студент!"}
