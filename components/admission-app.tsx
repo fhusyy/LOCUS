@@ -504,10 +504,7 @@ export function AdmissionApp() {
                 </div>
               ) : (
                 <>
-                  <span className="status-dot online" />
-                  <span className="cloud-status-text" title="Supabase Cloud Realtime Sync">
-                    {cloudStatus}
-                  </span>
+
                   <button className="button subtle small profile-pill-btn" onClick={editProfile}>
                     {profile.name || "Профиль"}
                   </button>
