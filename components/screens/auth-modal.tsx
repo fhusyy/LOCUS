@@ -49,7 +49,19 @@ export function AuthModal({
     setGoogleLoading(true);
 
     try {
-      const redirectUrl = typeof window !== "undefined" ? window.location.origin : undefined;
+      const configuredSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
+      const isLocalhost = typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname);
+
+      // A PKCE OAuth flow must start and finish on the same origin. When the
+      // app is opened locally, move the user to the published app first.
+      if (isLocalhost && configuredSiteUrl && configuredSiteUrl !== window.location.origin) {
+        const productionLoginUrl = new URL(configuredSiteUrl);
+        productionLoginUrl.searchParams.set("auth", "google");
+        window.location.assign(productionLoginUrl.toString());
+        return;
+      }
+
+      const redirectUrl = configuredSiteUrl || (typeof window !== "undefined" ? window.location.origin : undefined);
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -147,6 +159,9 @@ export function AuthModal({
         email: regEmail.trim(),
         password: regPassword,
         options: {
+          emailRedirectTo:
+            process.env.NEXT_PUBLIC_SITE_URL ||
+            (typeof window !== "undefined" ? window.location.origin : undefined),
           data: {
             name: regName.trim(),
             grade: regGrade,

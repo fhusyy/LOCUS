@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AuthModal } from './screens/auth-modal';
 import { useI18n } from './i18n-provider';
 
@@ -108,6 +108,15 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
   const [showNotification, setShowNotification] = useState(false);
 
   const isLoggedIn = isAuthenticated;
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('auth') !== 'google') return;
+
+    setAuthMode('login');
+    setIsAuthOpen(true);
+    window.history.replaceState({}, '', window.location.pathname);
+  }, []);
 
   const handleStart = (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
