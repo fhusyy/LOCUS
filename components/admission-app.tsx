@@ -537,14 +537,12 @@ export function AdmissionApp() {
                   ⚡ {t("nav.whatIf")}
                 </button>
               </nav>
-            ) : (
+            ) : screen !== "onboarding" ? (
               <nav className={`landing-nav ${mobileMenuOpen ? "mobile-open" : ""}`} aria-label="Навигация">
                 <button className="navlink" onClick={() => navigate("explore")}>{t("nav.catalog")}</button>
-                {screen !== "onboarding" && (
-                  <button className="navlink" onClick={() => navigate("what-if")}>{t("nav.whatIf")}</button>
-                )}
+                <button className="navlink" onClick={() => navigate("what-if")}>{t("nav.whatIf")}</button>
               </nav>
-            )}
+            ) : <div aria-hidden="true" />}
 
             <div className="header-meta">
               {!inProduct ? (
