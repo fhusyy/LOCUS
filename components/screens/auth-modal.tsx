@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { supabase } from "@/lib/supabase";
 import type { StudentProfile, Interest } from "@/lib/types";
 import { CheckIcon, SparkIcon } from "@/components/ui/icons";
+import { useI18n } from "@/components/i18n-provider";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export function AuthModal({
   initialMode = "login",
   onSuccess,
 }: AuthModalProps) {
+  const { t } = useI18n();
   const [mode, setMode] = useState<"login" | "register">(initialMode);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -83,8 +85,8 @@ export function AuthModal({
       // Helpful fallback if Google provider isn't enabled in Supabase project dashboard yet
       setErrorMsg(
         err.message?.includes("provider is not enabled")
-          ? "Google авторизация пока не включена в Supabase Dashboard (Auth → Providers → Google). Используйте вход по Email."
-          : `Ошибка входа через Google: ${err.message || "попробуйте снова"}`
+          ? t("auth.googleDisabled")
+          : t("auth.googleError", { message: err.message || t("auth.tryAgain") })
       );
     }
   };
@@ -95,11 +97,11 @@ export function AuthModal({
     setSuccessMsg("");
 
     if (!loginEmail.trim()) {
-      setErrorMsg("Введите ваш Email или логин");
+      setErrorMsg(t("auth.errorEmail"));
       return;
     }
     if (!loginPassword || loginPassword.length < 6) {
-      setErrorMsg("Пароль должен содержать не менее 6 символов");
+      setErrorMsg(t("auth.errorPassword"));
       return;
     }
 
@@ -112,7 +114,7 @@ export function AuthModal({
       });
 
       if (error) throw error;
-      if (!data.user || !data.session) throw new Error("Не удалось создать активную сессию. Попробуйте войти ещё раз.");
+      if (!data.user || !data.session) throw new Error(t("auth.errorSession"));
 
       // Extract user metadata or construct profile
       const derivedName = data?.user?.user_metadata?.name || loginEmail.split("@")[0] || "Абитуриент";
@@ -122,7 +124,7 @@ export function AuthModal({
         name: data?.user?.user_metadata?.name || formattedName,
       };
 
-      setSuccessMsg("Успешный вход в UniFlow через Supabase! Загружаем маршрут...");
+      setSuccessMsg(t("auth.successLogin"));
       setTimeout(() => {
         setLoading(false);
         onSuccess(userProfile);
@@ -130,7 +132,7 @@ export function AuthModal({
       }, 700);
     } catch (err: any) {
       setLoading(false);
-      setErrorMsg(err.message || "Ошибка авторизации");
+      setErrorMsg(err.message || t("auth.loginError"));
     }
   };
 
@@ -140,15 +142,15 @@ export function AuthModal({
     setSuccessMsg("");
 
     if (!regName.trim()) {
-      setErrorMsg("Укажите ваше имя");
+      setErrorMsg(t("auth.errorName"));
       return;
     }
     if (!regEmail.trim() || !regEmail.includes("@")) {
-      setErrorMsg("Введите корректный email адрес");
+      setErrorMsg(t("auth.errorEmailInvalid"));
       return;
     }
     if (!regPassword || regPassword.length < 6) {
-      setErrorMsg("Пароль должен быть не менее 6 символов");
+      setErrorMsg(t("auth.errorPassword"));
       return;
     }
 
@@ -185,12 +187,12 @@ export function AuthModal({
 
       if (!data.session || !data.user) {
         setLoading(false);
-        setSuccessMsg("Аккаунт создан. Подтвердите email по ссылке в письме, затем войдите в UniFlow.");
+        setSuccessMsg(t("auth.confirmEmail"));
         setMode("login");
         return;
       }
 
-      setSuccessMsg("Аккаунт создан в Supabase! Формируем вашу дорожную карту...");
+      setSuccessMsg(t("auth.successCreated"));
       setTimeout(() => {
         setLoading(false);
         onSuccess(newProfile);
@@ -198,7 +200,7 @@ export function AuthModal({
       }, 800);
     } catch (err: any) {
       setLoading(false);
-      setErrorMsg(err.message || "Ошибка регистрации в Supabase");
+      setErrorMsg(err.message || t("auth.registerError"));
     }
   };
 
@@ -238,7 +240,7 @@ export function AuthModal({
         {/* Close Button */}
         <button
           onClick={onClose}
-          aria-label="Закрыть"
+          aria-label={t("auth.close")}
           style={{
             position: "absolute",
             top: "18px",
@@ -284,7 +286,7 @@ export function AuthModal({
             </span>
           </div>
           <p style={{ margin: "2px 0 0", color: "#6a798b", fontSize: "13.5px", lineHeight: "1.4" }}>
-            Твой персональный навигатор поступления
+            {t("auth.tagline")}
           </p>
 
           {/* Mode Switcher Tabs */}
@@ -319,7 +321,7 @@ export function AuthModal({
                 boxShadow: mode === "login" ? "0 2px 8px rgba(0, 0, 0, 0.08)" : "none",
               }}
             >
-              Вход
+              {t("auth.login")}
             </button>
             <button
               type="button"
@@ -341,7 +343,7 @@ export function AuthModal({
                 boxShadow: mode === "register" ? "0 2px 8px rgba(0, 0, 0, 0.08)" : "none",
               }}
             >
-              Регистрация
+              {t("auth.register")}
             </button>
           </div>
         </div>
@@ -442,13 +444,13 @@ export function AuthModal({
                 d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
               />
             </svg>
-            <span>{googleLoading ? "Подключение..." : "Продолжить через Google"}</span>
+            <span>{googleLoading ? t("auth.googleLoading") : t("auth.google")}</span>
           </button>
 
           {/* DIVIDER */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "16px 0 20px" }}>
             <div style={{ flex: 1, height: "1px", background: "#E5E7EB" }} />
-            <span style={{ fontSize: "12px", color: "#9CA3AF", textTransform: "uppercase", fontWeight: 600 }}>или через email</span>
+            <span style={{ fontSize: "12px", color: "#9CA3AF", textTransform: "uppercase", fontWeight: 600 }}>{t("auth.emailDivider")}</span>
             <div style={{ flex: 1, height: "1px", background: "#E5E7EB" }} />
           </div>
 
@@ -457,7 +459,7 @@ export function AuthModal({
             <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#040915", marginBottom: "6px" }}>
-                  Email или логин
+                  {t("auth.email")}
                 </label>
                 <input
                   type="email"
@@ -490,16 +492,16 @@ export function AuthModal({
 
               <div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                  <label style={{ fontSize: "13px", fontWeight: 700, color: "#040915" }}>Пароль</label>
+                  <label style={{ fontSize: "13px", fontWeight: 700, color: "#040915" }}>{t("auth.password")}</label>
                   <a
                     href="#forgot"
                     onClick={(e) => {
                       e.preventDefault();
-                      alert("Для сброса пароля отправьте запрос на support@uniflow.kz.");
+                      alert(t("auth.forgotAlert"));
                     }}
                     style={{ fontSize: "12px", color: "#FE7505", textDecoration: "none", fontWeight: 600 }}
                   >
-                    Забыли пароль?
+                    {t("auth.forgotPassword")}
                   </a>
                 </div>
                 <div style={{ position: "relative" }}>
@@ -575,7 +577,7 @@ export function AuthModal({
                   e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
-                {loading ? "Вход..." : "Войти в личный кабинет →"}
+                {loading ? t("auth.loginLoading") : t("auth.loginSubmit")}
               </button>
 
             </form>
@@ -586,12 +588,12 @@ export function AuthModal({
             <form onSubmit={handleRegister} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#040915", marginBottom: "4px" }}>
-                  Твое имя и фамилия
+                  {t("auth.name")}
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Например, Алия Сапарова"
+                  placeholder={t("auth.namePlaceholder")}
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
                   style={{
@@ -630,7 +632,7 @@ export function AuthModal({
 
               <div>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#040915", marginBottom: "4px" }}>
-                  Пароль (от 6 символов)
+                  {t("auth.passwordHint")}
                 </label>
                 <input
                   type="password"
@@ -653,7 +655,7 @@ export function AuthModal({
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#040915", marginBottom: "4px" }}>
-                    Класс / Статус
+                    {t("auth.grade")}
                   </label>
                   <select
                     value={regGrade}
@@ -667,17 +669,17 @@ export function AuthModal({
                       backgroundColor: "#FAFAFA",
                     }}
                   >
-                    <option value="11">11 класс</option>
-                    <option value="10">10 класс</option>
-                    <option value="9">9 класс</option>
-                    <option value="Выпускник школы">Выпускник</option>
-                    <option value="Студент колледжа">Колледж</option>
+                    <option value="11">{t("wizard.grade.11")}</option>
+                    <option value="10">{t("wizard.grade.10")}</option>
+                    <option value="9">{t("wizard.grade.9")}</option>
+                    <option value="Выпускник школы">{t("wizard.grade.graduate")}</option>
+                    <option value="Студент колледжа">{t("wizard.grade.college")}</option>
                   </select>
                 </div>
 
                 <div>
                   <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#040915", marginBottom: "4px" }}>
-                    Балл ЕНТ
+                    {t("auth.unt")}
                   </label>
                   <input
                     type="number"
@@ -700,7 +702,7 @@ export function AuthModal({
 
               <div>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#040915", marginBottom: "4px" }}>
-                  Главный профессиональный интерес
+                  {t("auth.interest")}
                 </label>
                 <select
                   value={regInterest}
@@ -714,14 +716,14 @@ export function AuthModal({
                     backgroundColor: "#FAFAFA",
                   }}
                 >
-                  <option value="computer-science">Computer Science & AI</option>
-                  <option value="software-engineering">Software Engineering</option>
-                  <option value="data-science">Data Science & Big Data</option>
-                  <option value="cybersecurity">Кибербезопасность</option>
-                  <option value="finance-fintech">Финансы & Финтех</option>
-                  <option value="business-mgmt">Международный бизнес</option>
-                  <option value="medicine-general">Общая медицина</option>
-                  <option value="engineering-tech">Инженерия & Робототехника</option>
+                  <option value="computer-science">{t("auth.interest.cs")}</option>
+                  <option value="software-engineering">{t("auth.interest.se")}</option>
+                  <option value="data-science">{t("auth.interest.ds")}</option>
+                  <option value="cybersecurity">{t("auth.interest.cyber")}</option>
+                  <option value="finance-fintech">{t("auth.interest.finance")}</option>
+                  <option value="business-mgmt">{t("auth.interest.business")}</option>
+                  <option value="medicine-general">{t("auth.interest.medicine")}</option>
+                  <option value="engineering-tech">{t("auth.interest.engineering")}</option>
                 </select>
               </div>
 
@@ -743,7 +745,7 @@ export function AuthModal({
                   marginTop: "8px",
                 }}
               >
-                {loading ? "Регистрация..." : "Зарегистрироваться →"}
+                {loading ? t("auth.registerLoading") : t("auth.registerSubmit")}
               </button>
             </form>
           )}
