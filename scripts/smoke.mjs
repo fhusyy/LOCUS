@@ -44,6 +44,20 @@ try {
   await page.getByRole("button", { name: /Выйти из аккаунта/ }).click();
   await page.locator("header.hero").getByRole("link", { name: /Построить мой маршрут/ }).click();
   await page.getByRole("heading", { name: /Кто ты и когда планируешь поступать/ }).waitFor();
+
+  expect(await page.getByRole("button", { name: /Что если\?/ }).count() === 0, "What-if must be hidden until onboarding is complete");
+  await page.getByRole("button", { name: "EN", exact: true }).click();
+  await page.getByText("to personalize your route", { exact: true }).waitFor();
+  expect(await page.getByPlaceholder("For example, Aliya").isVisible(), "English onboarding hint was not translated");
+  expect(await page.getByRole("button", { name: "Grade 11", exact: true }).isVisible(), "Grade option was not translated");
+
+  // Native/browser Back must return to the previous UniFlow screen instead of
+  // closing the app or leaving the site.
+  await page.goBack();
+  await page.getByRole("heading", { name: /Your path to university/ }).waitFor();
+  await page.locator("header.hero").getByRole("link", { name: /Build my route/ }).click();
+  await page.getByRole("button", { name: "RU", exact: true }).click();
+  await page.getByRole("heading", { name: /Кто ты и когда планируешь поступать/ }).waitFor();
   await page.getByLabel(/Как тебя зовут/).fill("Алия");
   await page.getByRole("button", { name: /Продолжить/ }).click();
 
@@ -69,6 +83,21 @@ try {
   await page.getByRole("button", { name: /Спросить Gemini AI/ }).waitFor();
   await page.getByRole("button", { name: "Закрыть" }).click();
 
+  await page.getByRole("button", { name: "Маршрут", exact: true }).click();
+  await page.getByRole("heading", { name: /Твой путь поступления/ }).waitFor();
+  const roadmapVisuals = await page.locator(".next-action").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundColor, color: style.color };
+  });
+  expect(roadmapVisuals.background !== "rgba(255, 255, 250, 0.88)", "Roadmap action card was overridden by the pale card background");
+  expect(roadmapVisuals.color === "rgb(255, 255, 255)", `Roadmap action text is not readable: ${roadmapVisuals.color}`);
+  const progressOverflow = await page.locator(".route-progress").evaluate((element) => element.scrollWidth - element.clientWidth);
+  expect(progressOverflow <= 1, `Roadmap progress text overflows its card by ${progressOverflow}px`);
+  await page.screenshot({ path: `${output}/03-roadmap-contrast.png`, fullPage: false });
+
+  await page.goBack();
+  await page.getByRole("heading", { name: /персональный вектор поступления/ }).waitFor();
+
   expect(failedResources.length === 0, `Failed browser resources: ${failedResources.join(" | ")}`);
   expect(consoleErrors.length === 0, `Browser console errors: ${consoleErrors.join(" | ")}`);
   await desktop.close();
@@ -80,10 +109,10 @@ try {
   await mobilePage.getByRole("heading", { name: /all in one place/i }).waitFor();
   const overflow = await mobilePage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow <= 1, `Mobile horizontal overflow: ${overflow}px`);
-  await mobilePage.screenshot({ path: `${output}/03-landing-mobile-en.png`, fullPage: false });
+  await mobilePage.screenshot({ path: `${output}/04-landing-mobile-en.png`, fullPage: false });
   await mobile.close();
 
-  console.log(`Smoke test passed: ${cards} recommendations, RU/KK/EN switching, onboarding, modal, and mobile overflow.`);
+  console.log(`Smoke test passed: ${cards} recommendations, history Back, translated hints, roadmap contrast/progress, modal, and mobile overflow.`);
 } finally {
   await browser.close();
 }

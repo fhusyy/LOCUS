@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { buildRoadmap, formatMoney, matchPrograms, profileReadiness, categorizeProgram } from "@/lib/matching";
 import type {
   City,
@@ -50,6 +50,22 @@ export type Screen =
   | "shortlist"
   | "roadmap"
   | "what-if";
+
+const appScreens: Screen[] = [
+  "landing",
+  "onboarding",
+  "dashboard",
+  "results",
+  "explore",
+  "compare",
+  "shortlist",
+  "roadmap",
+  "what-if",
+];
+
+function isAppScreen(value: unknown): value is Screen {
+  return typeof value === "string" && appScreens.includes(value as Screen);
+}
 
 export type InterestCategory =
   | "it-ai"
@@ -293,6 +309,7 @@ export function AdmissionApp() {
   const { t } = useI18n();
   const [mounted, setMounted] = useState(false);
   const [screen, setScreen] = useState<Screen>("landing");
+  const screenRef = useRef<Screen>("landing");
   const [profile, setProfile] = useState<StudentProfile>(defaultProfile);
   const [targetId, setTargetId] = useState<string>("aitu-big-data");
   const [completed, setCompleted] = useState<string[]>(["shortlist"]);
@@ -339,6 +356,26 @@ export function AdmissionApp() {
     };
   }, []);
 
+  // Keep the single-page screen state in the browser history so the browser,
+  // Android and trackpad Back actions return to the previous UniFlow screen.
+  useEffect(() => {
+    const currentState = window.history.state && typeof window.history.state === "object"
+      ? window.history.state
+      : {};
+    window.history.replaceState({ ...currentState, uniflowScreen: screenRef.current }, "", window.location.href);
+
+    const handlePopState = (event: PopStateEvent) => {
+      const previousScreen = isAppScreen(event.state?.uniflowScreen) ? event.state.uniflowScreen : "landing";
+      screenRef.current = previousScreen;
+      setScreen(previousScreen);
+      setMobileMenuOpen(false);
+      window.scrollTo({ top: 0, behavior: "auto" });
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
   // Save changes and sync to Supabase
   useEffect(() => {
     if (!mounted) return;
@@ -357,11 +394,30 @@ export function AdmissionApp() {
   const modalMatch = modalProgramId ? allMatches.find((m) => m.program.id === modalProgramId) : undefined;
 
   const navigate = (next: Screen) => {
-    setScreen(next);
+    const safeNext = next === "what-if" && !profile.name.trim() ? "onboarding" : next;
+    if (screenRef.current === safeNext) {
+      setMobileMenuOpen(false);
+      return;
+    }
+
+    screenRef.current = safeNext;
+    setScreen(safeNext);
     setMobileMenuOpen(false);
     if (typeof window !== "undefined") {
+      const currentState = window.history.state && typeof window.history.state === "object"
+        ? window.history.state
+        : {};
+      window.history.pushState({ ...currentState, uniflowScreen: safeNext }, "", window.location.href);
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
+  };
+
+  const navigateBack = (fallback: Screen) => {
+    if (typeof window !== "undefined" && isAppScreen(window.history.state?.uniflowScreen) && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    navigate(fallback);
   };
 
   const handleToggleShortlist = (programId: string) => {
@@ -484,7 +540,9 @@ export function AdmissionApp() {
             ) : (
               <nav className={`landing-nav ${mobileMenuOpen ? "mobile-open" : ""}`} aria-label="Навигация">
                 <button className="navlink" onClick={() => navigate("explore")}>{t("nav.catalog")}</button>
-                <button className="navlink" onClick={() => navigate("what-if")}>{t("nav.whatIf")}</button>
+                {screen !== "onboarding" && (
+                  <button className="navlink" onClick={() => navigate("what-if")}>{t("nav.whatIf")}</button>
+                )}
               </nav>
             )}
 
@@ -562,7 +620,7 @@ export function AdmissionApp() {
         <OnboardingScreen
           profile={profile}
           setProfile={setProfile}
-          onCancel={() => navigate(editingFrom ? "dashboard" : "landing")}
+          onCancel={() => navigateBack(editingFrom ? "dashboard" : "landing")}
           onComplete={completeProfile}
         />
       )}
@@ -718,6 +776,13 @@ function OnboardingScreen({
     t("wizard.step.preferences"),
     t("wizard.step.review"),
   ];
+  const gradeOptions: Array<{ value: StudentProfile["grade"]; label: string }> = [
+    { value: "9", label: t("wizard.grade.9") },
+    { value: "10", label: t("wizard.grade.10") },
+    { value: "11", label: t("wizard.grade.11") },
+    { value: "Выпускник школы", label: t("wizard.grade.graduate") },
+    { value: "Студент колледжа", label: t("wizard.grade.college") },
+  ];
 
   const patch = (values: Partial<StudentProfile>) => setProfile({ ...profile, ...values });
 
@@ -782,15 +847,7 @@ function OnboardingScreen({
           <h2>{t(`wizard.heading.${step}`)}</h2>
           <div className="aside-tip">
             <SparkIcon size={16} />
-            <span>
-              {step === 0
-                ? "Выбор класса автоматически настраивает расчётный год выпуска и начала приёмной кампании."
-                : step === 1
-                ? "Ты можешь выбрать до 3 направлений. Система учтет профильные предметы ЕНТ и подберёт междисциплинарные вузы."
-                : step === 2
-                ? "В школах и лицеях РК стандартом является шкала GPA 4.0. Если ещё не сдавал ЕНТ/IELTS — оставь поле пустым."
-                : "Все параметры можно будет смоделировать в симуляторе «Что если?»."}
-            </span>
+            <span>{t(`wizard.tip.${step}`)}</span>
           </div>
         </aside>
 
@@ -800,12 +857,12 @@ function OnboardingScreen({
             <div className="form-stack">
               <div className="question-block">
                 <label htmlFor="name">
-                  {t("wizard.name")} <small>для персонализации маршрута</small>
+                  {t("wizard.name")} <small>{t("wizard.nameHint")}</small>
                 </label>
                 <input
                   id="name"
                   className="text-input"
-                  placeholder="Например, Алия"
+                  placeholder={t("wizard.namePlaceholder")}
                   value={profile.name}
                   onChange={(e) => patch({ name: e.target.value })}
                 />
@@ -814,14 +871,14 @@ function OnboardingScreen({
               <div className="question-block">
                 <label>{t("wizard.status")}</label>
                 <div className="segmented-grid">
-                  {(["9", "10", "11", "Выпускник школы", "Студент колледжа"] as const).map((val) => (
+                  {gradeOptions.map(({ value, label }) => (
                     <button
-                      key={val}
+                      key={value}
                       type="button"
-                      className={profile.grade === val ? "selected" : ""}
-                      onClick={() => handleGradeChange(val)}
+                      className={profile.grade === value ? "selected" : ""}
+                      onClick={() => handleGradeChange(value)}
                     >
-                      {val.includes("класс") || val.length > 2 ? val : `${val} класс`}
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -849,7 +906,7 @@ function OnboardingScreen({
                           {c}
                         </option>
                       ))}
-                      <option value="other">Другой город / посёлок...</option>
+                      <option value="other">{t("wizard.otherCity")}</option>
                     </select>
 
                     {/* ONLY SHOW CUSTOM INPUT WHEN "other" IS SELECTED */}
@@ -858,14 +915,14 @@ function OnboardingScreen({
                         <input
                           id="city-custom"
                           className="text-input"
-                          placeholder="Введи название своего города или посёлка..."
+                          placeholder={t("wizard.cityPlaceholder")}
                           value={profile.homeCity}
                           autoFocus
                           onChange={(e) => patch({ homeCity: e.target.value })}
                         />
                         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}>
                           <small className="field-hint">
-                            Укажи населённый пункт (для расчёта региональных квот МОН РК).
+                            {t("wizard.cityQuotaHint")}
                           </small>
                           <button
                             type="button"
@@ -873,7 +930,7 @@ function OnboardingScreen({
                             style={{ fontSize: "12px", color: "var(--accent-primary, #10b981)" }}
                             onClick={() => patch({ homeCity: "Астана" })}
                           >
-                            ← Выбрать из списка
+                            {t("wizard.chooseFromList")}
                           </button>
                         </div>
                       </div>
@@ -883,7 +940,7 @@ function OnboardingScreen({
 
                 <div className="question-block">
                   <label htmlFor="year">
-                    {t("wizard.enrollmentYear")} <small>(авторасчёт)</small>
+                    {t("wizard.enrollmentYear")} <small>{t("wizard.autoCalculated")}</small>
                   </label>
                   <select
                     id="year"
@@ -891,10 +948,10 @@ function OnboardingScreen({
                     value={profile.enrollmentYear}
                     onChange={(e) => patch({ enrollmentYear: Number(e.target.value) as any })}
                   >
-                    <option value={2027}>2027 год (набор следующего лета)</option>
-                    <option value={2028}>2028 год</option>
-                    <option value={2029}>2029 год</option>
-                    <option value={2030}>2030 год</option>
+                    <option value={2027}>{t("wizard.yearNext", { year: 2027 })}</option>
+                    <option value={2028}>{t("wizard.year", { year: 2028 })}</option>
+                    <option value={2029}>{t("wizard.year", { year: 2029 })}</option>
+                    <option value={2030}>{t("wizard.year", { year: 2030 })}</option>
                   </select>
                 </div>
               </div>
@@ -907,7 +964,7 @@ function OnboardingScreen({
               <div className="question-block">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
                   <label style={{ margin: 0 }}>
-                    {t("wizard.directions")} <small>(до 3)</small>
+                    {t("wizard.directions")} <small>{t("wizard.upToThree")}</small>
                   </label>
                   <span
                     style={{
@@ -927,7 +984,7 @@ function OnboardingScreen({
                   </span>
                 </div>
                 <p className="field-hint">
-                  Каталог направлений по стандартам <b>Niche</b>: отметь от 1 до 3 направлений, чтобы система подобрала программы казахстанских и зарубежных вузов.
+                  {t("wizard.directionHint")}
                 </p>
 
                 {/* CATEGORY TABS LIKE NICHE */}
@@ -991,7 +1048,7 @@ function OnboardingScreen({
               {/* UNT SUBJECT COMBINATION */}
               <div className="question-block" style={{ marginTop: "20px" }}>
                 <label>
-                  {t("wizard.untCombination")} <small>критично для конкурса грантов РК</small>
+                  {t("wizard.untCombination")} <small>{t("wizard.grantCritical")}</small>
                 </label>
                 <div className="unt-comb-picker-grid">
                   {untCombinationsList.map((comb) => (
@@ -1010,7 +1067,7 @@ function OnboardingScreen({
 
               <div className="question-block">
                 <label>
-                  {t("wizard.subjects")} <small>до 3</small>
+                  {t("wizard.subjects")} <small>{t("wizard.upToThree")}</small>
                 </label>
                 <div className="chip-list">
                   {subjects.map((sub) => {
@@ -1047,7 +1104,7 @@ function OnboardingScreen({
                   <label htmlFor="gpa">
                     {t("wizard.gpa")} <small>(4.0)</small>
                   </label>
-                  <p>Стандарт НИШ, БИЛ, лицеев и аттестатов РК (3.8–4.0 — отлично; 3.3–3.7 — хорошо)</p>
+                  <p>{t("wizard.gpaHint")}</p>
                 </div>
                 <div className="number-field">
                   <input
@@ -1066,7 +1123,7 @@ function OnboardingScreen({
               <div className="metric-input">
                 <div>
                   <label htmlFor="unt">{t("wizard.unt")}</label>
-                  <p>Максимум 140 баллов. Если ещё не сдавал, оставь пустым — включим в план.</p>
+                  <p>{t("wizard.untHint")}</p>
                 </div>
                 <div className="number-field">
                   <input
@@ -1085,7 +1142,7 @@ function OnboardingScreen({
               <div className="metric-input">
                 <div>
                   <label htmlFor="ielts">{t("wizard.ielts")}</label>
-                  <p>Большинство казахстанских вузов проводят также внутренний экзамен AET/KEET.</p>
+                  <p>{t("wizard.ieltsHint")}</p>
                 </div>
                 <div className="number-field">
                   <input
@@ -1105,7 +1162,7 @@ function OnboardingScreen({
               <div className="metric-input">
                 <div>
                   <label htmlFor="sat">{t("wizard.sat")}</label>
-                  <p>Шкала SAT от 400 до 1600. Полезно для Назарбаев Университета и вузов Европы/США.</p>
+                  <p>{t("wizard.satHint")}</p>
                 </div>
                 <div className="number-field">
                   <input
@@ -1161,7 +1218,7 @@ function OnboardingScreen({
                   <label className="toggle-row">
                     <span>
                       <strong>{t("wizard.grantOnly")}</strong>
-                      <small>Фокус исключительно на траекториях бесплатного обучения</small>
+                      <small>{t("wizard.grantHint")}</small>
                     </span>
                     <input
                       type="checkbox"
@@ -1185,8 +1242,8 @@ function OnboardingScreen({
                           className={`budget-option ${profile.budget === b ? "selected" : ""}`}
                           onClick={() => patch({ budget: b })}
                         >
-                          <span>{b >= 5_000_000 ? "свыше 4 млн ₸" : `до ${(b / 1_000_000).toFixed(1)} млн ₸`}</span>
-                          {b === 2_500_000 && <small>Средний тариф</small>}
+                          <span>{b >= 5_000_000 ? t("wizard.budgetOver") : t("wizard.budgetUpTo", { amount: (b / 1_000_000).toFixed(1) })}</span>
+                          {b === 2_500_000 && <small>{t("wizard.averageRate")}</small>}
                           {b === 1_600_000 && <small>КазНУ/Satbayev/МУИТ</small>}
                         </button>
                       ))}
@@ -1204,9 +1261,9 @@ function OnboardingScreen({
                     value={profile.language}
                     onChange={(e) => patch({ language: e.target.value as any })}
                   >
-                    <option value="Казахский / русский">Казахский / русский (госстандарт)</option>
-                    <option value="Английский">Английский</option>
-                    <option value="Неважно">Неважно (любой)</option>
+                    <option value="Казахский / русский">{t("wizard.language.kzRu")}</option>
+                    <option value="Английский">{t("wizard.language.en")}</option>
+                    <option value="Неважно">{t("wizard.language.any")}</option>
                   </select>
                 </div>
 
@@ -1233,8 +1290,8 @@ function OnboardingScreen({
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px", marginTop: "8px" }}>
                   <label className="toggle-row" style={{ padding: "10px", borderRadius: "10px", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
                     <span>
-                      <strong>Нужно общежитие в кампусе</strong>
-                      <small>Важно для иногородних абитуриентов</small>
+                      <strong>{t("wizard.dormitory")}</strong>
+                      <small>{t("wizard.dormitoryHint")}</small>
                     </span>
                     <input
                       type="checkbox"
@@ -1245,8 +1302,8 @@ function OnboardingScreen({
                   </label>
                   <label className="toggle-row" style={{ padding: "10px", borderRadius: "10px", background: "rgba(255, 255, 255, 0.03)", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
                     <span>
-                      <strong>Военная кафедра при вузе</strong>
-                      <small>Освобождение от срочной службы</small>
+                      <strong>{t("wizard.military")}</strong>
+                      <small>{t("wizard.militaryHint")}</small>
                     </span>
                     <input
                       type="checkbox"
@@ -1905,9 +1962,8 @@ function RoadmapScreen({
   const { t } = useI18n();
   const tasks = buildRoadmap(profile, match);
   const next = tasks.find((task) => !completed.includes(task.id));
-  const progress = Math.round(
-    (completed.filter((id) => tasks.some((t) => t.id === id)).length / Math.max(1, tasks.length)) * 100
-  );
+  const completedCount = completed.filter((id) => tasks.some((task) => task.id === id)).length;
+  const progress = Math.round((completedCount / Math.max(1, tasks.length)) * 100);
 
   const taskIcons: Record<RoadmapTask["category"], string> = {
     profile: "◎",
@@ -1921,19 +1977,19 @@ function RoadmapScreen({
       <div className="page-title roadmap-title">
         <div>
           <div className="eyebrow-pill">
-            <SparkIcon size={14} /> Персональный пошаговый маршрут
+            <SparkIcon size={14} /> {t("roadmap.kicker")}
           </div>
           <h1>{t("roadmap.title", { university: match.program.shortName })}</h1>
           <p className="subtitle">
-            {match.program.program} • Набор на осень {profile.enrollmentYear} года
+            {t("roadmap.intake", { program: match.program.program, year: profile.enrollmentYear })}
           </p>
         </div>
 
         <div className="route-progress card-glass">
           <ScoreRing value={progress} size="normal" showLabel={false} />
           <div>
-            <strong>{progress}% выполнено</strong>
-            <span>{completed.length} из {tasks.length} ключевых шагов</span>
+            <strong>{t("roadmap.completed", { progress })}</strong>
+            <span>{t("roadmap.steps", { completed: completedCount, total: tasks.length })}</span>
           </div>
         </div>
       </div>
@@ -1942,13 +1998,13 @@ function RoadmapScreen({
         <section className="next-action card-glass">
           <div className="next-icon">→</div>
           <div>
-            <small>СЛЕДУЮЩЕЕ ПРИОРИТЕТНОЕ ДЕЙСТВИЕ</small>
+            <small>{t("roadmap.next")}</small>
             <h2>{next.title}</h2>
             <p>{next.description}</p>
             <span className="action-date">🗓 {next.dateLabel}</span>
           </div>
           <button className="button light" onClick={() => onToggle(next.id)}>
-            <CheckIcon size={14} /> Отметить выполненным
+            <CheckIcon size={14} /> {t("roadmap.markComplete")}
           </button>
         </section>
       ) : (
@@ -1968,8 +2024,8 @@ function RoadmapScreen({
         <div className="timeline card-glass">
           <div className="timeline-head">
             <div>
-              <h2>Хронологический план подготовки</h2>
-              <p>Разделяем личные контрольные точки и официальные даты вуза.</p>
+              <h2>{t("roadmap.timeline")}</h2>
+              <p>{t("roadmap.timelineHint")}</p>
             </div>
             <div className="legend">
               <span>

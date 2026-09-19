@@ -33,6 +33,10 @@ function isProfile(value: unknown): value is StudentProfile {
   if (!value || typeof value !== "object") return false;
   const profile = value as Partial<StudentProfile>;
   return (
+    typeof profile.name === "string" &&
+    profile.name.trim().length > 0 &&
+    typeof profile.homeCity === "string" &&
+    profile.homeCity.trim().length > 0 &&
     typeof profile.gpa === "number" &&
     typeof profile.budget === "number" &&
     Array.isArray(profile.preferredCities) &&
