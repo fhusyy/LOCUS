@@ -87,10 +87,10 @@ try {
   await page.getByRole("heading", { name: /Твой путь поступления/ }).waitFor();
   const roadmapVisuals = await page.locator(".next-action").evaluate((element) => {
     const style = getComputedStyle(element);
-    return { background: style.backgroundColor, color: style.color };
+    return { backgroundImage: style.backgroundImage, color: style.color };
   });
-  expect(roadmapVisuals.background !== "rgba(255, 255, 250, 0.88)", "Roadmap action card was overridden by the pale card background");
-  expect(roadmapVisuals.color === "rgb(255, 255, 255)", `Roadmap action text is not readable: ${roadmapVisuals.color}`);
+  expect(roadmapVisuals.backgroundImage.includes("linear-gradient"), "Roadmap action card must keep its light highlighted background");
+  expect(roadmapVisuals.color === "rgb(4, 9, 21)", `Roadmap action text is not readable: ${roadmapVisuals.color}`);
   const progressOverflow = await page.locator(".route-progress").evaluate((element) => element.scrollWidth - element.clientWidth);
   expect(progressOverflow <= 1, `Roadmap progress text overflows its card by ${progressOverflow}px`);
   await page.screenshot({ path: `${output}/03-roadmap-contrast.png`, fullPage: false });
