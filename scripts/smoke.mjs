@@ -71,6 +71,18 @@ try {
   await page.getByRole("button", { name: /Построить персональный маршрут/ }).click();
 
   await page.getByRole("heading", { name: /Привет, Алия/ }).waitFor();
+  const overviewActionVisuals = await page.locator(".dash-next-action-card").evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { backgroundImage: style.backgroundImage, color: style.color };
+  });
+  expect(
+    overviewActionVisuals.backgroundImage.includes("linear-gradient"),
+    "Overview action card must keep its light highlighted background",
+  );
+  expect(
+    overviewActionVisuals.color === "rgb(4, 9, 21)",
+    `Overview action text is not readable: ${overviewActionVisuals.color}`,
+  );
   await page.getByRole("button", { name: "Рекомендации", exact: true }).click();
   await page.getByRole("heading", { name: /персональный вектор поступления/ }).waitFor();
   await page.getByRole("button", { name: /AI-подбор по 106 вузам/ }).waitFor();
