@@ -95,6 +95,23 @@ export interface LandingPageProps {
   isAuthenticated?: boolean;
 }
 
+function StaggeredLabel({ value }: { value: string }) {
+  return (
+    <>
+      {value.split(" ").map((word, wordIndex) => (
+        <React.Fragment key={`${word}-${wordIndex}`}>
+          {wordIndex > 0 ? " " : null}
+          <span className="tricksword">
+            {Array.from(word).map((letter, letterIndex) => (
+              <span className="letter" key={`${letter}-${letterIndex}`}>{letter}</span>
+            ))}
+          </span>
+        </React.Fragment>
+      ))}
+    </>
+  );
+}
+
 export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLogout, isAuthenticated = false }: LandingPageProps = {}) {
   const { t, tr } = useI18n();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -562,27 +579,27 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
                   </div>
                   <div className="spacer-1em"></div>
                   <p style={{ opacity: 1, color: '#94a3b8', fontSize: '16px', lineHeight: 1.6 }}>
-                    КУДА поступать → ПОЧЕМУ это подходит → ЧТО ДЕЛАТЬ ДАЛЬШЕ. Умный движок рекомендаций мгновенно адаптируется, если меняются твои приоритеты, баллы или семейный бюджет.
+                    {tr("КУДА поступать → ПОЧЕМУ это подходит → ЧТО ДЕЛАТЬ ДАЛЬШЕ. Умный движок рекомендаций мгновенно адаптируется, если меняются твои приоритеты, баллы или семейный бюджет.")}
                     <br /><br />
-                    <strong>Ключевые возможности платформы:</strong>
+                    <strong>{tr("Ключевые возможности платформы:")}</strong>
                   </p>
                   <div className="benefits-wrapper">
                     <div className="benefit-wrapper first" style={{ opacity: 1 }}>
                       <div><img src="/assets/asset_9.svg" loading="lazy" alt="Star" className="star" /></div>
                       <div>
-                        <p><strong>Объективная диагностика профиля:</strong> сильные стороны, скрытые ограничения и реалистичные шансы на бюджет.</p>
+                        <p>{tr("Объективная диагностика профиля: сильные стороны, скрытые ограничения и реалистичные шансы на бюджет.")}</p>
                       </div>
                     </div>
                     <div className="benefit-wrapper" style={{ opacity: 1 }}>
                       <div><img src="/assets/asset_9.svg" loading="lazy" alt="Star" className="star" /></div>
                       <div>
-                        <p><strong>Умная категоризация (Safety, Target, Reach):</strong> детальное объяснение, почему каждый университет подходит именно тебе.</p>
+                        <p>{tr("Умная категоризация (Safety, Target, Reach): детальное объяснение, почему каждый университет подходит именно тебе.")}</p>
                       </div>
                     </div>
                     <div className="benefit-wrapper" style={{ opacity: 1 }}>
                       <div><img src="/assets/asset_9.svg" loading="lazy" alt="Star" className="star" /></div>
                       <div>
-                        <p><strong>Персональный Roadmap &amp; Next Action:</strong> пошаговый таймлайн дедлайнов, сбора справок и подготовки к тестам.</p>
+                        <p>{tr("Персональный Roadmap & Next Action: пошаговый таймлайн дедлайнов, сбора справок и подготовки к тестам.")}</p>
                       </div>
                     </div>
                   </div>
@@ -594,14 +611,7 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
                       className="btn secondary stagger-text w-inline-block"
                       style={{ opacity: 1, textDecoration: 'none' }}
                     >
-                      <div className="btn-text">
-                        <span className="tricksword">
-                          <span className="letter">О</span><span className="letter">т</span><span className="letter">к</span><span className="letter">р</span><span className="letter">ы</span><span className="letter">т</span><span className="letter">ь</span>
-                        </span>{' '}
-                        <span className="tricksword">
-                          <span className="letter">м</span><span className="letter">а</span><span className="letter">р</span><span className="letter">ш</span><span className="letter">р</span><span className="letter">у</span><span className="letter">т</span>
-                        </span>
-                      </div>
+                      <div className="btn-text"><StaggeredLabel value={tr("Открыть маршрут")} /></div>
                     </a>
                   </div>
                 </div>
@@ -632,7 +642,7 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
                 </div>
                 <div className="spacer-1em"></div>
                 <p style={{ opacity: 1, fontSize: '18px', lineHeight: 1.7, color: '#94a3b8', maxWidth: '640px' }}>
-                  Мы уверены: выбор будущего университета должен быть понятным, вдохновляющим и доступным для каждого школьника, без переплат агентствам и страха пропустить важный дедлайн.
+                  {tr("Мы уверены: выбор будущего университета должен быть понятным, вдохновляющим и доступным для каждого школьника, без переплат агентствам и страха пропустить важный дедлайн.")}
                 </p>
                 <div className="spacer-2em"></div>
                 <div className="btn-wrapper">
@@ -642,14 +652,7 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
                     className="btn secondary stagger-text w-inline-block"
                     style={{ opacity: 1, textDecoration: 'none' }}
                   >
-                    <div className="btn-text">
-                      <span className="tricksword">
-                        <span className="letter">П</span><span className="letter">р</span><span className="letter">о</span><span className="letter">й</span><span className="letter">т</span><span className="letter">и</span>
-                      </span>{' '}
-                      <span className="tricksword">
-                        <span className="letter">т</span><span className="letter">е</span><span className="letter">с</span><span className="letter">т</span>
-                      </span>
-                    </div>
+                    <div className="btn-text"><StaggeredLabel value={tr("Пройти тест")} /></div>
                   </a>
                 </div>
               </div>
@@ -664,11 +667,11 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
             <div className="container flex-cc-v">
               <div className="testimonial-wrapper">
                 <h2 className="testimonial">
-                  «UniFlow сразу показал, на какие специальности в AITU и КБТУ я прохожу на грант с моим ЕНТ, и разложил дедлайны. Поступил с первой попытки!»
+                  {tr("«UniFlow сразу показал, на какие специальности в AITU и КБТУ я прохожу на грант с моим ЕНТ, и разложил дедлайны. Поступил с первой попытки!»")}
                 </h2>
                 <div className="spacer-0-5em"></div>
                 <p className="p-full">
-                  Без суеты, с чётким пониманием каждого шага подготовки документов и военной кафедры.
+                  {tr("Без суеты, с чётким пониманием каждого шага подготовки документов и военной кафедры.")}
                 </p>
                 <div className="testimonial-author-wrapper">
                   <div className="testimonial-author-img-parent">
@@ -676,11 +679,11 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
                   </div>
                   <div className="testimonial-author-info">
                     <div className="div-hide is--always">
-                      <div className="sm-upper" style={{ fontWeight: 800, color: '#fff' }}>Алихан Сапаров</div>
+                      <div className="sm-upper" style={{ fontWeight: 800, color: '#fff' }}>{tr("Алихан Сапаров")}</div>
                     </div>
                     <div className="spacer-0-5em"></div>
                     <div className="div-hide is--always">
-                      <div className="sm-upper" style={{ color: '#FE7505' }}>Студент Software Engineering · AITU (118 ЕНТ / 7.5 IELTS)</div>
+                      <div className="sm-upper" style={{ color: '#FE7505' }}>{tr("Студент Software Engineering · AITU (118 ЕНТ / 7.5 IELTS)")}</div>
                     </div>
                   </div>
                 </div>
@@ -712,14 +715,7 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
                 className="btn bigger btn-gradient stagger-text w-inline-block"
                 style={{ opacity: 1, textDecoration: 'none' }}
               >
-                <div className="btn-text">
-                  <span className="tricksword">
-                    <span className="letter">П</span><span className="letter">о</span><span className="letter">с</span><span className="letter">т</span><span className="letter">р</span><span className="letter">о</span><span className="letter">и</span><span className="letter">т</span><span className="letter">ь</span>
-                  </span>{' '}
-                  <span className="tricksword">
-                    <span className="letter">м</span><span className="letter">а</span><span className="letter">р</span><span className="letter">ш</span><span className="letter">р</span><span className="letter">у</span><span className="letter">т</span>
-                  </span>
-                </div>
+                <div className="btn-text"><StaggeredLabel value={tr("Построить маршрут")} /></div>
               </a>
             </div>
             <div className="hero-bg-wrapper cta">
@@ -740,23 +736,23 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
                   </span>
                 </a>
                 <div className="logo-tag" style={{ color: '#94a3b8', fontSize: '14px', lineHeight: 1.6, marginTop: '12px' }}>
-                  Персональный AI-навигатор поступления в университеты.<br />
-                  Куда поступать, почему это подходит и что делать дальше.
+                  {tr("Персональный AI-навигатор поступления в университеты.")}<br />
+                  {tr("Куда поступать, почему это подходит и что делать дальше.")}
                 </div>
               </div>
 
               <div className="footer-link-wrapper">
                 <div className="footer-link-grid">
-                  <div className="sm-upper footer">МЕНЮ</div>
-                  <a href="#diagnosis" onClick={(e) => handleNav('dashboard', 'diagnosis', e)} className="footer-link">Диагностика</a>
-                  <a href="#recommendations" onClick={(e) => handleNav('results', 'recommendations', e)} className="footer-link">Подбор ВУЗов</a>
-                  <a href="#compare" onClick={(e) => handleNav('compare', 'compare', e)} className="footer-link">Сравнение программ</a>
-                  <a href="#roadmap" onClick={(e) => handleNav('roadmap', 'roadmap', e)} className="footer-link">Дорожная карта</a>
-                  <a href="#action" onClick={(e) => handleNav('dashboard', 'action', e)} className="footer-link">Ближайший шаг</a>
+                  <div className="sm-upper footer">{tr("МЕНЮ")}</div>
+                  <a href="#diagnosis" onClick={(e) => handleNav('dashboard', 'diagnosis', e)} className="footer-link">{tr("Диагностика")}</a>
+                  <a href="#recommendations" onClick={(e) => handleNav('results', 'recommendations', e)} className="footer-link">{tr("Подбор ВУЗов")}</a>
+                  <a href="#compare" onClick={(e) => handleNav('compare', 'compare', e)} className="footer-link">{tr("Сравнение программ")}</a>
+                  <a href="#roadmap" onClick={(e) => handleNav('roadmap', 'roadmap', e)} className="footer-link">{tr("Дорожная карта")}</a>
+                  <a href="#action" onClick={(e) => handleNav('dashboard', 'action', e)} className="footer-link">{tr("Ближайший шаг")}</a>
                 </div>
 
                 <div className="footer-link-grid btm">
-                  <div className="sm-upper footer">Контакты</div>
+                  <div className="sm-upper footer">{tr("Контакты")}</div>
                   <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="social-link w-inline-block">
                     <div className="footer-link">Telegram</div>
                     <img src="/assets/asset_17.svg" loading="lazy" alt="arrow" className="social-arrow" />

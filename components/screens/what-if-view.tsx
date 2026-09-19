@@ -15,7 +15,7 @@ export function WhatIfView({
   onApplyProfile: (updated: StudentProfile) => void;
   onViewProgram: (programId: string) => void;
 }) {
-  const { t, locale } = useI18n();
+  const { t, tr, locale } = useI18n();
   const [simProfile, setSimProfile] = useState<StudentProfile>({ ...profile });
 
   const patchSim = (patch: Partial<StudentProfile>) => {
@@ -79,52 +79,52 @@ export function WhatIfView({
 
       {/* Quick Presets */}
       <div className="presets-bar">
-        <span className="presets-label">Быстрые сценарии:</span>
+        <span className="presets-label">{tr("Быстрые сценарии:")}</span>
         <button
           className="preset-pill"
           onClick={() => patchSim({ unt: Math.min(140, (profile.unt ?? 85) + 15) })}
         >
-          +15 баллов к ЕНТ (цель на грант)
+          {tr("+15 баллов к ЕНТ (цель на грант)")}
         </button>
         <button
           className="preset-pill"
           onClick={() => patchSim({ gpa: 3.9 })}
         >
-          Отличный аттестат (GPA 3.9 / 4.0)
+          {tr("Отличный аттестат (GPA 3.9 / 4.0)")}
         </button>
         <button
           className="preset-pill"
           onClick={() => patchSim({ ielts: 6.5, language: "Английский" })}
         >
-          IELTS 6.5 (для NU и КБТУ)
+          {tr("IELTS 6.5 (для NU и КБТУ)")}
         </button>
         <button
           className="preset-pill"
           onClick={() => patchSim({ onlyGrant: true })}
         >
-          Только государственный грант
+          {tr("Только государственный грант")}
         </button>
         <button
           className="preset-pill"
           onClick={() => patchSim({ budget: Math.min(8_000_000, profile.budget + 1_000_000), onlyGrant: false })}
         >
-          +1 млн ₸ к бюджету
+          {tr("+1 млн ₸ к бюджету")}
         </button>
         <button className="preset-pill reset" onClick={resetToCurrent}>
-          Сбросить к моему профилю
+          {tr("Сбросить к моему профилю")}
         </button>
       </div>
 
       <div className="what-if-grid">
         {/* Controls Sidebar */}
         <div className="what-if-controls card-glass">
-          <h3>Параметры симуляции</h3>
+          <h3>{tr("Параметры симуляции")}</h3>
 
           {/* UNT */}
           <div className="control-group">
             <div className="control-header">
-              <label htmlFor="sim-unt">Балл ЕНТ (из 140)</label>
-              <strong className="control-value">{simProfile.unt ?? "не указан"}</strong>
+              <label htmlFor="sim-unt">{tr("Балл ЕНТ (из 140)")}</label>
+              <strong className="control-value">{simProfile.unt ?? tr("не указан")}</strong>
             </div>
             <input
               id="sim-unt"
@@ -137,9 +137,9 @@ export function WhatIfView({
               className="range-slider"
             />
             <div className="slider-ticks">
-              <span>50 (порог)</span>
-              <span>85 (платное)</span>
-              <span>102 (грант AITU)</span>
+              <span>{tr("50 (порог)")}</span>
+              <span>{tr("85 (платное)")}</span>
+              <span>{tr("102 (грант AITU)")}</span>
               <span>125 (NU)</span>
             </div>
           </div>
@@ -147,7 +147,7 @@ export function WhatIfView({
           {/* GPA on 4.0 scale */}
           <div className="control-group">
             <div className="control-header">
-              <label htmlFor="sim-gpa">Средний балл GPA (шкала 4.0)</label>
+              <label htmlFor="sim-gpa">{tr("Средний балл GPA (шкала 4.0)")}</label>
               <strong className="control-value">{simProfile.gpa.toFixed(2)} / 4.0</strong>
             </div>
             <input
@@ -164,15 +164,15 @@ export function WhatIfView({
               <span>2.5</span>
               <span>3.2</span>
               <span>3.6</span>
-              <span>4.0 (макс)</span>
+              <span>{tr("4.0 (макс)")}</span>
             </div>
           </div>
 
           {/* IELTS */}
           <div className="control-group">
             <div className="control-header">
-              <label htmlFor="sim-ielts">IELTS балл</label>
-              <strong className="control-value">{simProfile.ielts ? `${simProfile.ielts} / 9.0` : "Без IELTS"}</strong>
+              <label htmlFor="sim-ielts">{tr("IELTS балл")}</label>
+              <strong className="control-value">{simProfile.ielts ? `${simProfile.ielts} / 9.0` : tr("Без IELTS")}</strong>
             </div>
             <input
               id="sim-ielts"
@@ -186,7 +186,7 @@ export function WhatIfView({
             />
             <div className="slider-ticks">
               <span>4.5</span>
-              <span>5.5 (SDU/КБТУ)</span>
+              <span>{tr("5.5 (SDU/КБТУ)")}</span>
               <span>6.5 (NU)</span>
               <span>9.0</span>
             </div>
@@ -196,8 +196,8 @@ export function WhatIfView({
           <div className="control-group">
             <label className="toggle-row" style={{ marginBottom: "10px" }}>
               <span>
-                <strong>Рассматриваю только грант</strong>
-                <small>Исключить платное обучение</small>
+                <strong>{tr("Рассматриваю только грант")}</strong>
+                <small>{tr("Исключить платное обучение")}</small>
               </span>
               <input
                 type="checkbox"
@@ -210,8 +210,8 @@ export function WhatIfView({
             {!simProfile.onlyGrant && (
               <>
                 <div className="control-header">
-                  <label htmlFor="sim-budget">Годовой бюджет</label>
-                  <strong className="control-value">{formatMoney(simProfile.budget)} / год</strong>
+                  <label htmlFor="sim-budget">{tr("Годовой бюджет")}</label>
+                  <strong className="control-value">{formatMoney(simProfile.budget)} / {tr("год")}</strong>
                 </div>
                 <input
                   id="sim-budget"
@@ -235,7 +235,7 @@ export function WhatIfView({
 
           {/* Preferred City */}
           <div className="control-group">
-            <label>Приоритетные города РК</label>
+            <label>{tr("Приоритетные города РК")}</label>
             <div className="city-toggle-grid">
               {(["Астана", "Алматы", "Каскелен", "Караганда", "Шымкент", "Любой город Казахстана"] as City[]).map((city) => {
                 const active = simProfile.preferredCities.includes(city);
@@ -254,7 +254,7 @@ export function WhatIfView({
                       }
                     }}
                   >
-                    {active && <CheckIcon size={12} />} {city}
+                    {active && <CheckIcon size={12} />} {tr(city)}
                   </button>
                 );
               })}
@@ -263,7 +263,7 @@ export function WhatIfView({
 
           <div className="apply-section">
             <button className="button primary full-width" onClick={applyChanges}>
-              Применить симуляцию к профилю <Chevron />
+              {tr("Применить симуляцию к профилю")} <Chevron />
             </button>
           </div>
         </div>
@@ -273,16 +273,16 @@ export function WhatIfView({
           {/* Delta Banner */}
           <div className="diff-banner card-glass">
             <div className="diff-header">
-              <span className="diff-kicker">СРАВНЕНИЕ РЕЗУЛЬТАТОВ</span>
+              <span className="diff-kicker">{tr("СРАВНЕНИЕ РЕЗУЛЬТАТОВ")}</span>
               <span className={`diff-pill ${delta > 0 ? "positive" : delta < 0 ? "negative" : "neutral"}`}>
-                {delta > 0 ? `+${delta}% совместимости` : delta < 0 ? `${delta}%` : "Без изменений"}
+                {delta > 0 ? `+${delta}% ${tr("совместимости")}` : delta < 0 ? `${delta}%` : tr("Без изменений")}
               </span>
             </div>
 
             <div className="before-after-cards">
               {/* CURRENT */}
               <div className="state-card current-state">
-                <span className="state-badge">ТЕКУЩИЙ ПРОФИЛЬ</span>
+                <span className="state-badge">{tr("ТЕКУЩИЙ ПРОФИЛЬ")}</span>
                 <div className="state-header">
                   <span className="uni-mark">{currentTop.program.shortName.slice(0, 2)}</span>
                   <div>
@@ -303,7 +303,7 @@ export function WhatIfView({
 
               {/* SIMULATED */}
               <div className="state-card simulated-state">
-                <span className="state-badge sim">СИМУЛЯЦИЯ</span>
+                <span className="state-badge sim">{tr("СИМУЛЯЦИЯ")}</span>
                 <div className="state-header">
                   <span className="uni-mark">{simulatedTop.program.shortName.slice(0, 2)}</span>
                   <div>
@@ -326,10 +326,10 @@ export function WhatIfView({
               <div className="impact-callout unlocked">
                 <CheckIcon size={16} />
                 <div>
-                  <strong>Новые открытые возможности:</strong>
+                  <strong>{tr("Новые открытые возможности:")}</strong>
                   <p>
-                    С симулированными параметрами программы{" "}
-                    <b>{comparison.unlockedPrograms.join(", ")}</b> теперь доступны по твоим критериям отбора!
+                    {tr("С симулированными параметрами программы")} {" "}
+                    <b>{comparison.unlockedPrograms.join(", ")}</b> {tr("теперь доступны по твоим критериям отбора!")}
                   </p>
                 </div>
               </div>
@@ -339,9 +339,9 @@ export function WhatIfView({
               <div className="impact-callout restricted">
                 <span>!</span>
                 <div>
-                  <strong>Ограничения по стоимости:</strong>
+                  <strong>{tr("Ограничения по стоимости:")}</strong>
                   <p>
-                    Программы <b>{comparison.newlyRestrictedPrograms.join(", ")}</b> потребуют грантовой траектории или повышенного балла ЕНТ.
+                    {tr("Программы")} <b>{comparison.newlyRestrictedPrograms.join(", ")}</b> {tr("потребуют грантовой траектории или повышенного балла ЕНТ.")}
                   </p>
                 </div>
               </div>
@@ -398,7 +398,7 @@ export function WhatIfView({
 
             {/* Top simulated matches table */}
           <div className="simulated-ranking card-glass">
-            <h3>Топ программ по симулированному профилю</h3>
+            <h3>{tr("Топ программ по симулированному профилю")}</h3>
             <div className="sim-ranking-list">
               {matchPrograms(simProfile)
                 .slice(0, 4)
@@ -418,7 +418,7 @@ export function WhatIfView({
                       className="button subtle small"
                       onClick={() => onViewProgram(match.program.id)}
                     >
-                      Подробнее
+                      {tr("Подробнее")}
                     </button>
                   </div>
                 ))}
