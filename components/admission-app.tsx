@@ -17,6 +17,7 @@ import type {
   CareerFocus,
 } from "@/lib/types";
 import { programs } from "@/lib/programs";
+import { localizeDisplay } from "@/lib/display-localization";
 import { loadAccountState, syncToCloud, supabase } from "@/lib/supabase";
 
 import { ScoreRing } from "@/components/ui/score-ring";
@@ -274,7 +275,7 @@ function Logo() {
 }
 
 export function AdmissionApp() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [screen, setScreen] = useState<Screen>("landing");
   const screenRef = useRef<Screen>("landing");
   const [profile, setProfile] = useState<StudentProfile>(blankProfile);
@@ -463,7 +464,7 @@ export function AdmissionApp() {
 
   const completeProfile = () => {
     if (!hasCompleteProfile(profile)) {
-      setNotice("Заполни обязательные поля профиля перед построением маршрута.");
+      setNotice(locale === "en" ? "Complete the required profile fields before building your route." : locale === "kk" ? "Маршрутты құрмас бұрын профильдің міндетті өрістерін толтыр." : "Заполни обязательные поля профиля перед построением маршрута.");
       return;
     }
     const nextTop = diversified(matchPrograms(profile), 1)[0];
@@ -471,8 +472,8 @@ export function AdmissionApp() {
       const previous = allMatches.find((item) => item.program.id === editingFrom)?.program.shortName;
       setNotice(
         previous && nextTop && previous !== nextTop.program.shortName
-          ? `Лидер изменился: ${previous} → ${nextTop.program.shortName}. Обновлены баллы и дорожная карта.`
-          : "Обновлены баллы совместимости, рекомендации и пошаговый маршрут."
+          ? locale === "en" ? `The top match changed: ${previous} → ${nextTop.program.shortName}. Scores and roadmap were updated.` : locale === "kk" ? `Үздік сәйкестік өзгерді: ${previous} → ${nextTop.program.shortName}. Балдар мен жол картасы жаңартылды.` : `Лидер изменился: ${previous} → ${nextTop.program.shortName}. Обновлены баллы и дорожная карта.`
+          : locale === "en" ? "Fit scores, recommendations, and the step-by-step roadmap have been updated." : locale === "kk" ? "Сәйкестік балдары, ұсынымдар және қадамдық маршрут жаңартылды." : "Обновлены баллы совместимости, рекомендации и пошаговый маршрут."
       );
     }
     setTargetId(nextTop?.program.id ?? targetId);
@@ -495,7 +496,7 @@ export function AdmissionApp() {
     setCompleted([]);
     setShortlist([]);
     setApplications([]);
-    setNotice("Вы вышли из аккаунта");
+    setNotice(locale === "en" ? "You have signed out" : locale === "kk" ? "Аккаунттан шықтыңыз" : "Вы вышли из аккаунта");
     navigate("landing");
   };
 
@@ -515,7 +516,7 @@ export function AdmissionApp() {
             </div>
 
             {inProduct ? (
-              <nav className={`product-nav ${mobileMenuOpen ? "mobile-open" : ""}`} aria-label="Разделы навигатора">
+              <nav className={`product-nav ${mobileMenuOpen ? "mobile-open" : ""}`} aria-label={locale === "en" ? "Product navigation" : locale === "kk" ? "Өнім бөлімдері" : "Разделы навигатора"}>
                 <button className={screen === "dashboard" ? "active" : ""} onClick={() => navigate("dashboard")}>
                   {t("nav.overview")}
                 </button>
@@ -539,7 +540,7 @@ export function AdmissionApp() {
                 </button>
               </nav>
             ) : screen !== "onboarding" ? (
-              <nav className={`landing-nav ${mobileMenuOpen ? "mobile-open" : ""}`} aria-label="Навигация">
+              <nav className={`landing-nav ${mobileMenuOpen ? "mobile-open" : ""}`} aria-label={locale === "en" ? "Navigation" : locale === "kk" ? "Навигация" : "Навигация"}>
                 <button className="navlink" onClick={() => navigate("explore")}>{t("nav.catalog")}</button>
                 <button className="navlink" onClick={() => navigate("what-if")}>{t("nav.whatIf")}</button>
               </nav>
@@ -549,13 +550,13 @@ export function AdmissionApp() {
               {authUserId && (
                 <>
                   <button className="button subtle small profile-pill-btn" onClick={editProfile}>
-                    {profile.name || "Профиль"}
+                    {profile.name || (locale === "en" ? "Profile" : locale === "kk" ? "Профиль" : "Профиль")}
                   </button>
                   <button
                     className="button subtle small"
                     onClick={handleLogout}
                     style={{ fontSize: "12px", color: "#EF4444", padding: "4px 8px" }}
-                    title="Выйти из аккаунта"
+                    title={locale === "en" ? "Sign out" : locale === "kk" ? "Аккаунттан шығу" : "Выйти из аккаунта"}
                   >
                     {t("nav.logout")}
                   </button>
@@ -564,7 +565,7 @@ export function AdmissionApp() {
               <button
                 className="mobile-menu-toggle"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                aria-label="Меню"
+                aria-label={locale === "en" ? "Menu" : locale === "kk" ? "Мәзір" : "Меню"}
               >
                 ☰
               </button>
@@ -587,7 +588,7 @@ export function AdmissionApp() {
             const { data } = await supabase.auth.getUser();
             if (!data.user) return;
             const loaded = await hydrateAccount(data.user, authProfile);
-            setNotice(`Вход выполнен: ${loaded.name || "Пользователь"}`);
+            setNotice(locale === "en" ? `Signed in as ${loaded.name || "User"}` : locale === "kk" ? `Кіру орындалды: ${loaded.name || "Пайдаланушы"}` : `Вход выполнен: ${loaded.name || "Пользователь"}`);
             navigate(hasCompleteProfile(loaded) ? "dashboard" : "onboarding");
           }}
         />
@@ -700,7 +701,7 @@ export function AdmissionApp() {
           profile={profile}
           onApplyProfile={(updated) => {
             setProfile(updated);
-            setNotice("Параметры из симулятора сохранены в основной профиль абитуриента!");
+            setNotice(locale === "en" ? "Simulation settings were saved to your main applicant profile!" : locale === "kk" ? "Симуляция параметрлері негізгі талапкер профиліне сақталды!" : "Параметры из симулятора сохранены в основной профиль абитуриента!");
             navigate("dashboard");
           }}
           onViewProgram={(id) => setModalProgramId(id)}
@@ -743,7 +744,22 @@ function OnboardingScreen({
   onCancel: () => void;
   onComplete: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const ld = (value: string) => localizeDisplay(value, locale);
+  const interestDescription = (category: InterestCategory) => {
+    if (locale === "ru") return "";
+    const descriptions: Record<InterestCategory, { en: string; kk: string }> = {
+      "it-ai": { en: "Technology, software, data, and intelligent systems", kk: "Технология, бағдарламалау, деректер және зияткерлік жүйелер" },
+      "business-finance": { en: "Business, finance, analytics, and entrepreneurship", kk: "Бизнес, қаржы, талдау және кәсіпкерлік" },
+      engineering: { en: "Engineering design, production, and modern technologies", kk: "Инженерлік жобалау, өндіріс және заманауи технологиялар" },
+      "medicine-health": { en: "Medicine, clinical practice, and healthcare technologies", kk: "Медицина, клиникалық тәжірибе және денсаулық сақтау технологиялары" },
+      "law-social": { en: "Law, international relations, and social sciences", kk: "Құқық, халықаралық қатынастар және әлеуметтік ғылымдар" },
+      "design-creative": { en: "Design, media, digital products, and creative industries", kk: "Дизайн, медиа, цифрлық өнімдер және креативті индустриялар" },
+      "natural-sciences": { en: "Mathematics, natural sciences, and research", kk: "Математика, жаратылыстану ғылымдары және зерттеу" },
+      "languages-pedagogy": { en: "Languages, education, and learning technologies", kk: "Тілдер, білім беру және оқыту технологиялары" },
+    };
+    return descriptions[category][locale];
+  };
   const [step, setStep] = useState(0);
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const wizardSteps = [
@@ -889,7 +905,7 @@ function OnboardingScreen({
                     >
                       {kazakhstanHometowns.map((c) => (
                         <option key={c} value={c}>
-                          {c}
+                          {ld(c)}
                         </option>
                       ))}
                       <option value="other">{t("wizard.otherCity")}</option>
@@ -1001,7 +1017,7 @@ function OnboardingScreen({
                       }}
                       onClick={() => setActiveCategory(cat.id)}
                     >
-                      <span>{cat.icon}</span> {cat.label}
+                      <span>{cat.icon}</span> {ld(cat.label)}
                     </button>
                   ))}
                 </div>
@@ -1021,8 +1037,8 @@ function OnboardingScreen({
                         >
                           <span className="interest-icon">{item.icon}</span>
                           <span className="interest-text">
-                            <strong>{item.title}</strong>
-                            <small>{item.description}</small>
+                            <strong>{ld(item.title)}</strong>
+                            <small>{locale === "ru" ? item.description : interestDescription(item.category)}</small>
                           </span>
                           <i>{isSelected && <CheckIcon size={14} />}</i>
                         </button>
@@ -1044,7 +1060,7 @@ function OnboardingScreen({
                       className={`unt-comb-btn ${profile.untCombination === comb ? "active" : ""}`}
                       onClick={() => patch({ untCombination: comb })}
                     >
-                      <span>{comb}</span>
+                      <span>{ld(comb)}</span>
                       {profile.untCombination === comb && <CheckIcon size={14} />}
                     </button>
                   ))}
@@ -1073,7 +1089,7 @@ function OnboardingScreen({
                           })
                         }
                       >
-                        {active && <CheckIcon size={12} />} {sub}
+                        {active && <CheckIcon size={12} />} {ld(sub)}
                       </button>
                     );
                   })}
@@ -1191,7 +1207,7 @@ function OnboardingScreen({
                           })
                         }
                       >
-                        {active && <CheckIcon size={12} />} {city}
+                        {active && <CheckIcon size={12} />} {ld(city)}
                       </button>
                     );
                   })}
@@ -1263,7 +1279,7 @@ function OnboardingScreen({
                   >
                     {careerFocusesList.map((f) => (
                       <option key={f} value={f}>
-                        {f}
+                        {ld(f)}
                       </option>
                     ))}
                   </select>
@@ -1307,51 +1323,51 @@ function OnboardingScreen({
           {step === 4 && (
             <div className="summary-grid">
               <article>
-                <span>Выбранные направления ({selectedInterests.length})</span>
+                <span>{locale === "en" ? `Selected fields (${selectedInterests.length})` : locale === "kk" ? `Таңдалған бағыттар (${selectedInterests.length})` : `Выбранные направления (${selectedInterests.length})`}</span>
                 <strong>
-                  {selectedInterests.map((k) => interestLabels[k]?.title || k).join(" • ")}
+                  {selectedInterests.map((k) => ld(interestLabels[k]?.title || k)).join(" • ")}
                 </strong>
                 <button type="button" onClick={() => setStep(1)}>
                   {t("wizard.edit")}
                 </button>
               </article>
               <article>
-                <span>Предметы ЕНТ</span>
-                <strong>{profile.untCombination}</strong>
+                <span>{locale === "en" ? "UNT subjects" : locale === "kk" ? "ҰБТ пәндері" : "Предметы ЕНТ"}</span>
+                <strong>{ld(profile.untCombination)}</strong>
                 <button type="button" onClick={() => setStep(1)}>
                   {t("wizard.edit")}
                 </button>
               </article>
               <article>
-                <span>Академика (GPA 4.0)</span>
+                <span>{locale === "en" ? "Academics (GPA 4.0)" : locale === "kk" ? "Академиялық көрсеткіштер (GPA 4.0)" : "Академика (GPA 4.0)"}</span>
                 <strong>
-                  {profile.grade.includes("класс") || profile.grade.length > 2 ? profile.grade : `${profile.grade} класс`} • GPA {profile.gpa.toFixed(2)}/4.0 • ЕНТ {profile.unt ?? "не сдан"} {profile.sat ? `• SAT ${profile.sat}` : ""}
+                  {locale === "en" ? (profile.grade.length <= 2 ? `Grade ${profile.grade}` : ld(profile.grade)) : locale === "kk" ? (profile.grade.length <= 2 ? `${profile.grade}-сынып` : ld(profile.grade)) : (profile.grade.includes("класс") || profile.grade.length > 2 ? profile.grade : `${profile.grade} класс`)} • GPA {profile.gpa.toFixed(2)}/4.0 • {locale === "kk" ? "ҰБТ" : "UNT"} {profile.unt ?? (locale === "en" ? "not taken" : locale === "kk" ? "тапсырылмаған" : "не сдан")} {profile.sat ? `• SAT ${profile.sat}` : ""}
                 </strong>
                 <button type="button" onClick={() => setStep(2)}>
                   {t("wizard.edit")}
                 </button>
               </article>
               <article>
-                <span>Финансы и города</span>
+                <span>{locale === "en" ? "Budget and cities" : locale === "kk" ? "Бюджет және қалалар" : "Финансы и города"}</span>
                 <strong>
-                  {profile.onlyGrant ? "Только госгрант (0 ₸)" : `${formatMoney(profile.budget)} / год`} • {profile.preferredCities.join(", ")}
+                  {profile.onlyGrant ? (locale === "en" ? "State grant only (₸0)" : locale === "kk" ? "Тек мемлекеттік грант (0 ₸)" : "Только госгрант (0 ₸)") : `${formatMoney(profile.budget)} ${locale === "en" ? "/ year" : locale === "kk" ? "/ жыл" : "/ год"}`} • {profile.preferredCities.map(ld).join(", ")}
                 </strong>
                 <button type="button" onClick={() => setStep(3)}>
                   {t("wizard.edit")}
                 </button>
               </article>
               <article>
-                <span>Язык и инфраструктура</span>
+                <span>{locale === "en" ? "Language and facilities" : locale === "kk" ? "Оқу тілі және инфрақұрылым" : "Язык и инфраструктура"}</span>
                 <strong>
-                  {profile.language} • {profile.dormitoryNeeded ? "С общежитием" : "Без общежития"} {profile.militaryDepartment ? "• Воен. кафедра" : ""}
+                  {ld(profile.language)} • {profile.dormitoryNeeded ? (locale === "en" ? "Dormitory required" : locale === "kk" ? "Жатақхана қажет" : "С общежитием") : (locale === "en" ? "No dormitory required" : locale === "kk" ? "Жатақхана қажет емес" : "Без общежития")} {profile.militaryDepartment ? (locale === "en" ? "• Military department" : locale === "kk" ? "• Әскери кафедра" : "• Воен. кафедра") : ""}
                 </strong>
                 <button type="button" onClick={() => setStep(3)}>
                   {t("wizard.edit")}
                 </button>
               </article>
               <article>
-                <span>Выпуск и приём</span>
-                <strong>Лето {profile.enrollmentYear} года</strong>
+                <span>{locale === "en" ? "Graduation and intake" : locale === "kk" ? "Мектеп бітіру және қабылдау" : "Выпуск и приём"}</span>
+                <strong>{locale === "en" ? `Summer ${profile.enrollmentYear}` : locale === "kk" ? `${profile.enrollmentYear} жылдың жазы` : `Лето ${profile.enrollmentYear} года`}</strong>
                 <button type="button" onClick={() => setStep(0)}>
                   {t("wizard.edit")}
                 </button>
@@ -1412,6 +1428,7 @@ function ResultsScreen({
   onOpenWhatIf: () => void;
 }) {
   const { t, locale, tr } = useI18n();
+  const ld = (value: string) => localizeDisplay(value, locale);
   const readiness = profileReadiness(profile);
   const [expandedId, setExpandedId] = useState<string | null>(matches[0]?.program.id ?? null);
   const [aiRecommendation, setAiRecommendation] = useState<string | null>(null);
@@ -1476,7 +1493,7 @@ function ResultsScreen({
         <div className="change-banner card-glass">
           <span>↻</span>
           <div>
-            <strong>Маршрут пересчитан в реальном времени</strong>
+            <strong>{tr("Маршрут пересчитан в реальном времени")}</strong>
             <p>{notice}</p>
           </div>
         </div>
@@ -1492,8 +1509,11 @@ function ResultsScreen({
             {t("results.title", { name: profile.name ? `${profile.name}, ` : "" })}
           </h1>
           <p className="subtitle">
-            Мы сопоставили твои направления ({profileInterests.map((k) => interestLabels[k]?.title || k).join(", ")}), комбинацию предметов ЕНТ ({profile.untCombination}), GPA {profile.gpa.toFixed(2)}/4.0 и
-            финансовую траекторию с официальными данными вузов.
+            {locale === "en"
+              ? `We matched your selected fields (${profileInterests.map((k) => ld(interestLabels[k]?.title || k)).join(", ")}), UNT subjects (${ld(profile.untCombination)}), GPA ${profile.gpa.toFixed(2)}/4.0, and budget with official university data.`
+              : locale === "kk"
+              ? `Таңдаған бағыттарыңды (${profileInterests.map((k) => ld(interestLabels[k]?.title || k)).join(", ")}), ҰБТ пәндерін (${ld(profile.untCombination)}), GPA ${profile.gpa.toFixed(2)}/4.0 және бюджетіңді ЖОО-лардың ресми деректерімен салыстырдық.`
+              : `Мы сопоставили твои направления (${profileInterests.map((k) => interestLabels[k]?.title || k).join(", ")}), комбинацию предметов ЕНТ (${profile.untCombination}), GPA ${profile.gpa.toFixed(2)}/4.0 и финансовую траекторию с официальными данными вузов.`}
           </p>
         </div>
 
@@ -1520,7 +1540,7 @@ function ResultsScreen({
           <ul>
             {strengths.map((item) => (
               <li key={item}>
-                <CheckIcon size={14} /> {item}
+                <CheckIcon size={14} /> {ld(item)}
               </li>
             ))}
           </ul>
@@ -1537,7 +1557,7 @@ function ResultsScreen({
           <ul>
             {constraints.map((item) => (
               <li key={item}>
-                <b>—</b> {item}
+                <b>—</b> {ld(item)}
               </li>
             ))}
           </ul>
@@ -1546,15 +1566,15 @@ function ResultsScreen({
         <article className="goal-card card-glass">
           <small>{tr("Выбранные сферы")} ({profileInterests.length})</small>
           <strong>
-            {profileInterests.map((k) => interestLabels[k]?.title || k).join(" • ")}
+            {profileInterests.map((k) => ld(interestLabels[k]?.title || k)).join(" • ")}
           </strong>
           <span>
-            {profile.preferredCities.join(" • ")} • {tr("Набор")} {profile.enrollmentYear}
+            {profile.preferredCities.map(ld).join(" • ")} • {tr("Набор")} {profile.enrollmentYear}
           </span>
           <div className="goal-tags">
             <i>{profile.onlyGrant ? tr("Только грант (0 ₸)") : `${formatMoney(profile.budget)} / ${tr("год")}`}</i>
-            <i>{profile.language}</i>
-            <i>{profile.careerFocus}</i>
+            <i>{ld(profile.language)}</i>
+            <i>{ld(profile.careerFocus)}</i>
             {profile.dormitoryNeeded && <i>{tr("Общежитие")}</i>}
             {profile.militaryDepartment && <i>{tr("Воен. кафедра")}</i>}
           </div>
@@ -1608,7 +1628,7 @@ function ResultsScreen({
                   <button
                     className={`bookmark-btn ${isBookmarked ? "active" : ""}`}
                     onClick={() => onToggleShortlist(match.program.id)}
-                    title={isBookmarked ? "В шорт-листе" : "Добавить в шорт-лист"}
+                    title={isBookmarked ? tr("В шорт-листе") : tr("Добавить в шорт-лист")}
                   >
                     <BookmarkIcon filled={isBookmarked} size={16} />
                   </button>
@@ -1618,11 +1638,11 @@ function ResultsScreen({
                   <span className="uni-mark">{match.program.shortName.slice(0, 2)}</span>
                   <div className="match-info">
                     <div className="match-meta">
-                      <span>{match.program.city}</span>
+                      <span>{ld(match.program.city)}</span>
                       <i>•</i>
-                      <span>{tr(match.program.duration)}</span>
+                      <span>{ld(match.program.duration)}</span>
                       <i>•</i>
-                      <span>{tr(match.program.language)}</span>
+                      <span>{ld(match.program.language)}</span>
                     </div>
                     <h3>{match.program.university}</h3>
                     <p>
@@ -1630,7 +1650,7 @@ function ResultsScreen({
                     </p>
                     <div className="tag-row">
                       {match.program.highlights.slice(0, 3).map((tag) => (
-                        <span key={tag}>{tag}</span>
+                        <span key={tag}>{ld(tag)}</span>
                       ))}
                     </div>
                   </div>
@@ -1645,14 +1665,14 @@ function ResultsScreen({
                         <i>
                           <CheckIcon size={14} />
                         </i>
-                        {reason}
+                        {ld(reason)}
                       </p>
                     ))}
                   </div>
                   <div className="fact-box">
                     <div>
                       <span>{t("results.cost")}</span>
-                      <strong>{match.program.tuitionLabel}</strong>
+                      <strong>{ld(match.program.tuitionLabel)}</strong>
                       <ConfidenceBadge confidence={match.program.tuitionConfidence} />
                     </div>
                     <div>
@@ -1674,7 +1694,7 @@ function ResultsScreen({
                   <div className="gap-line">
                     <span>!</span>
                     <p>
-                      <strong>{tr("Точка роста:")}</strong> {match.gaps[0]}
+                      <strong>{tr("Точка роста:")}</strong> {ld(match.gaps[0])}
                     </p>
                   </div>
                 )}
@@ -1683,7 +1703,7 @@ function ResultsScreen({
                 {isExpanded && (
                   <div className="match-details">
                     <div>
-                      <h4>Детализация баллов ({match.score}/100)</h4>
+                      <h4>{tr("Детализация баллов")} ({match.score}/100)</h4>
                       {[
                         ["academic", "Академика"],
                         ["program", "Направление"],
@@ -1693,7 +1713,7 @@ function ResultsScreen({
                         ["preferences", "Приоритеты"],
                       ].map(([key, label]) => (
                         <div className="score-bar" key={key}>
-                          <span>{label}</span>
+                          <span>{tr(label)}</span>
                           <i>
                             <b style={{ width: `${(match.breakdown as any)[key]}%` }} />
                           </i>
@@ -1703,26 +1723,26 @@ function ResultsScreen({
                     </div>
 
                     <div className="requirements">
-                      <h4>Требования и источники</h4>
+                      <h4>{tr("Требования и источники")}</h4>
                       <p>
-                        <span>Профили ЕНТ</span>
-                        <strong>{match.program.untCombinations.join(", ")}</strong>
+                        <span>{tr("Профили ЕНТ")}</span>
+                        <strong>{match.program.untCombinations.map(ld).join(", ")}</strong>
                       </p>
                       <p>
-                        <span>Порог ЕНТ</span>
-                        <strong>{match.program.untPaid ? `${match.program.untPaid}+` : "уточнить"}</strong>
+                        <span>{tr("Порог ЕНТ")}</span>
+                        <strong>{match.program.untPaid ? `${match.program.untPaid}+` : tr("уточнить")}</strong>
                       </p>
                       <p>
-                        <span>Ориентир на грант</span>
-                        <strong>{match.program.untGrant ? `${match.program.untGrant}+` : "конкурсный отбор"}</strong>
+                        <span>{tr("Ориентир на грант")}</span>
+                        <strong>{match.program.untGrant ? `${match.program.untGrant}+` : ld("конкурсный отбор")}</strong>
                       </p>
                       <p>
-                        <span>Тариф за</span>
+                        <span>{tr("Тариф за")}</span>
                         <strong>{match.program.tuitionYear}</strong>
                       </p>
-                      {match.program.dataNote && <small>{match.program.dataNote}</small>}
+                      {match.program.dataNote && <small>{ld(match.program.dataNote)}</small>}
                       <a href={match.program.source.url} target="_blank" rel="noreferrer">
-                        Официальный портал {match.program.shortName} <ExternalLinkIcon size={12} />
+                        {tr("Официальный портал")} {match.program.shortName} <ExternalLinkIcon size={12} />
                       </a>
                     </div>
                   </div>
@@ -1779,7 +1799,8 @@ function CompareScreen({
   onTarget: (id: string) => void;
   onViewProgram: (id: string) => void;
 }) {
-  const { t, tr } = useI18n();
+  const { t, tr, locale } = useI18n();
+  const ld = (value: string) => localizeDisplay(value, locale);
   const [leftId, setLeftId] = useState(defaultLeftId || matches[0]?.program.id || "");
   const [rightId, setRightId] = useState(
     matches.find((m) => m.program.id !== defaultLeftId)?.program.id || matches[1]?.program.id || ""
@@ -1796,7 +1817,7 @@ function CompareScreen({
     ["Город кампуса", left.program.city, right.program.city],
     ["Срок программы", left.program.duration, right.program.duration],
     ["Язык обучения", left.program.language, right.program.language],
-    ["Профильные предметы ЕНТ", left.program.untCombinations.join(" / "), right.program.untCombinations.join(" / ")],
+    ["Профильные предметы ЕНТ", left.program.untCombinations.map(ld).join(" / "), right.program.untCombinations.map(ld).join(" / ")],
     [
       "Порог ЕНТ (платно)",
       left.program.untPaid ? `${left.program.untPaid}+` : "уточнить",
@@ -1877,8 +1898,8 @@ function CompareScreen({
         {rows.map(([label, lVal, rVal]) => (
           <div className="compare-row" key={label}>
             <span>{tr(label)}</span>
-            <strong className={lVal.includes("✓") || lVal.includes("100") ? "positive" : ""}>{lVal}</strong>
-            <strong className={rVal.includes("✓") || rVal.includes("100") ? "positive" : ""}>{rVal}</strong>
+            <strong className={lVal.includes("✓") || lVal.includes("100") ? "positive" : ""}>{ld(lVal)}</strong>
+            <strong className={rVal.includes("✓") || rVal.includes("100") ? "positive" : ""}>{ld(rVal)}</strong>
           </div>
         ))}
 
@@ -1886,7 +1907,7 @@ function CompareScreen({
           <span>{tr("Персональный вывод")}</span>
           <div>
             <strong>{tr(left.score >= right.score ? "Лидирует по общему мэтчу" : "Альтернативный вариант")}</strong>
-            <p>{left.reasons[0]}</p>
+            <p>{ld(left.reasons[0])}</p>
           </div>
           <div>
             <strong>
@@ -1894,7 +1915,7 @@ function CompareScreen({
                 ? tr("Выгоднее по стоимости обучения")
                 : tr("Сильный альтернативный профиль")}
             </strong>
-            <p>{right.reasons[0]}</p>
+            <p>{ld(right.reasons[0])}</p>
           </div>
         </div>
 
@@ -1907,7 +1928,7 @@ function CompareScreen({
               onRoadmap();
             }}
           >
-            Выбрать {left.program.shortName} целью
+            {locale === "en" ? `Set ${left.program.shortName} as target` : locale === "kk" ? `${left.program.shortName} ЖОО-сын мақсат ету` : `Выбрать ${left.program.shortName} целью`}
           </button>
           <button
             className="button outline"
@@ -1916,7 +1937,7 @@ function CompareScreen({
               onRoadmap();
             }}
           >
-            Выбрать {right.program.shortName} целью
+            {locale === "en" ? `Set ${right.program.shortName} as target` : locale === "kk" ? `${right.program.shortName} ЖОО-сын мақсат ету` : `Выбрать ${right.program.shortName} целью`}
           </button>
         </div>
       </section>
@@ -1967,6 +1988,16 @@ function RoadmapScreen({
         description: en ? `Compare ${match.program.shortName} with 2–3 alternative universities in your shortlist.` : `${match.program.shortName} нұсқасын таңдаулы тізімдегі 2–3 балама ЖОО-мен салыстыр.`,
         reason: en ? "A clear shortlist defines priority subjects and exam dates." : "Нақты тізім дайындықтағы басым пәндер мен емтихан күндерін анықтайды.",
       },
+      english: {
+        title: en ? `Pass IELTS ${match.program.ielts ?? 5.5}+ or the ${match.program.shortName} internal exam` : `IELTS ${match.program.ielts ?? 5.5}+ немесе ${match.program.shortName} ішкі емтиханын тапсыру`,
+        description: en ? "Confirm the required English level before enrollment." : "Оқуға қабылдануға дейін қажетті ағылшын деңгейін раста.",
+        reason: en ? "A language certificate confirms readiness for English-taught courses." : "Тіл сертификаты ағылшын тіліндегі пәндерге дайын екеніңді растайды.",
+      },
+      unt: {
+        title: en ? `Prepare for the UNT (${localizeDisplay(profile.untCombination, locale)})` : `ҰБТ-ға дайындалу (${localizeDisplay(profile.untCombination, locale)})`,
+        description: en ? "Take regular practice tests and strengthen your core subjects." : "Тұрақты сынақ тесттерін тапсырып, бейіндік пәндерді күшейт.",
+        reason: en ? "A competitive UNT score improves both admission and grant chances." : "Бәсекелі ҰБТ балы оқуға түсу және грант алу мүмкіндігін арттырады.",
+      },
       documents: {
         title: en ? "Collect the Kazakhstan applicant document package" : "ҚР талапкерінің құжаттар пакетін жинау",
         description: en ? "Prepare your ID, certificate, UNT result, medical form, and vaccination card." : "Жеке куәлік, аттестат, ҰБТ сертификаты, медициналық анықтама және екпе картасын дайында.",
@@ -2015,7 +2046,7 @@ function RoadmapScreen({
             <small>{t("roadmap.next")}</small>
             <h2>{localTask(next).title}</h2>
             <p>{localTask(next).description}</p>
-            <span className="action-date">🗓 {next.dateLabel}</span>
+            <span className="action-date">🗓 {localizeDisplay(next.dateLabel, locale)}</span>
           </div>
           <button className="button light" onClick={() => onToggle(next.id)}>
             <CheckIcon size={14} /> {t("roadmap.markComplete")}
@@ -2068,7 +2099,7 @@ function RoadmapScreen({
                         : task.dateType === "official"
                         ? tr("Официально")
                         : tr("Проверить")}{" "}
-                      • {task.dateLabel}
+                      • {localizeDisplay(task.dateLabel, locale)}
                     </span>
                     <button
                       className={`task-check ${done ? "active" : ""}`}
@@ -2116,9 +2147,9 @@ function RoadmapScreen({
           <div className="route-warning card-glass">
             <span>!</span>
             <div>
-              <strong>Даты набора {profile.enrollmentYear} уточняются</strong>
+              <strong>{locale === "en" ? `${profile.enrollmentYear} intake dates are being confirmed` : locale === "kk" ? `${profile.enrollmentYear} қабылдау күндері нақтылануда` : `Даты набора ${profile.enrollmentYear} уточняются`}</strong>
               <p>
-                Мы показываем ориентировочные сроки подготовки. Всегда сверяй официальный календарь приёма на сайте вуза.
+                {locale === "en" ? "We show estimated preparation dates. Always check the official admission calendar on the university website." : locale === "kk" ? "Біз дайындықтың болжамды мерзімдерін көрсетеміз. ЖОО сайтындағы ресми қабылдау күнтізбесін әрдайым тексер." : "Мы показываем ориентировочные сроки подготовки. Всегда сверяй официальный календарь приёма на сайте вуза."}
               </p>
             </div>
           </div>
@@ -2126,7 +2157,7 @@ function RoadmapScreen({
           <div className="route-stats card-glass">
             <p>
               <span>{tr("Стоимость")}</span>
-              <strong>{match.program.tuitionLabel}</strong>
+              <strong>{localizeDisplay(match.program.tuitionLabel, locale)}</strong>
             </p>
             <p>
               <span>{tr("Порог ЕНТ")}</span>

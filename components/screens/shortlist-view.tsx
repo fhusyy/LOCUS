@@ -5,6 +5,7 @@ import { ScoreRing } from "@/components/ui/score-ring";
 import { CategoryBadge } from "@/components/ui/confidence-badge";
 import { BookmarkIcon, CheckIcon, Chevron, ExternalLinkIcon, MapPinIcon } from "@/components/ui/icons";
 import { useI18n } from "@/components/i18n-provider";
+import { localizeDisplay } from "@/lib/display-localization";
 
 const stagesList: Array<{ key: ApplicationStage; label: string }> = [
   { key: "research", label: "1. Исследование" },
@@ -85,12 +86,12 @@ export function ShortlistView({
       {shortlistedMatches.length === 0 ? (
         <div className="empty-state-card card-glass">
           <div className="empty-icon" style={{ fontSize: "32px", opacity: 0.3, marginBottom: "12px" }}>—</div>
-          <h3>Твой шорт-лист пока пуст</h3>
+          <h3>{tr("Твой шорт-лист пока пуст")}</h3>
           <p>
-            Добавляй понравившиеся университеты из Рекомендаций или Каталога, чтобы сравнивать их и отслеживать прогресс.
+            {tr("Добавляй понравившиеся университеты из Рекомендаций или Каталога, чтобы сравнивать их и отслеживать прогресс.")}
           </p>
           <button className="button primary" onClick={onExploreMore}>
-            Перейти в каталог программ <Chevron />
+            {tr("Перейти в каталог программ")} <Chevron />
           </button>
         </div>
       ) : activeTab === "shortlist" ? (
@@ -119,7 +120,7 @@ export function ShortlistView({
                 ))}
               </div>
             ) : (
-              <p className="empty-group-hint">Нет программ в этой категории. Добавь из каталога.</p>
+              <p className="empty-group-hint">{tr("Нет программ в этой категории. Добавь из каталога.")}</p>
             )}
           </section>
 
@@ -146,7 +147,7 @@ export function ShortlistView({
                 ))}
               </div>
             ) : (
-              <p className="empty-group-hint">Рекомендуется добавить 1–2 амбициозных варианта для максимизации шансов.</p>
+              <p className="empty-group-hint">{tr("Рекомендуется добавить 1–2 амбициозных варианта для максимизации шансов.")}</p>
             )}
           </section>
 
@@ -173,7 +174,7 @@ export function ShortlistView({
                 ))}
               </div>
             ) : (
-              <p className="empty-group-hint">Добавь хотя бы 1 надёжный вуз для уверенности и спокойствия.</p>
+              <p className="empty-group-hint">{tr("Добавь хотя бы 1 надёжный вуз для уверенности и спокойствия.")}</p>
             )}
           </section>
         </div>
@@ -181,9 +182,9 @@ export function ShortlistView({
         /* APPLICATION PIPELINE TRACKER */
         <div className="application-tracker card-glass">
           <div className="tracker-table-header">
-            <div className="col-uni">Университет / Программа</div>
-            <div className="col-pipeline">Статус в приёмной комиссии</div>
-            <div className="col-actions">Действия</div>
+            <div className="col-uni">{tr("Университет / Программа")}</div>
+            <div className="col-pipeline">{tr("Статус в приёмной комиссии")}</div>
+            <div className="col-actions">{tr("Действия")}</div>
           </div>
 
           <div className="tracker-list">
@@ -214,10 +215,10 @@ export function ShortlistView({
                             key={st.key}
                             className={`stage-step-btn ${isDone ? "done" : ""} ${isCurrent ? "active" : ""}`}
                             onClick={() => onUpdateStage(item.programId, st.key)}
-                            title={`Нажмите, чтобы перевести в статус "${st.label}"`}
+                            title={`${tr("Перевести в статус")}: ${tr(st.label)}`}
                           >
                             <span className="step-circle">{isDone ? <CheckIcon size={12} /> : idx + 1}</span>
-                            <span className="step-text">{st.label.replace(/^\d+\.\s*/, "")}</span>
+                            <span className="step-text">{tr(st.label).replace(/^\d+\.\s*/, "")}</span>
                           </button>
                         );
                       })}
@@ -229,15 +230,15 @@ export function ShortlistView({
                       className="button subtle small"
                       onClick={() => onViewProgram(item.programId)}
                     >
-                      Детали
+                      {tr("Детали")}
                     </button>
                     {currentTargetId !== item.programId && (
                       <button
                         className="button outline small"
                         onClick={() => onSetTarget(item.programId)}
-                        title="Построить персональный roadmap для этой программы"
+                        title={tr("Построить персональный roadmap для этой программы")}
                       >
-                        Сделать целью
+                        {tr("Сделать целью")}
                       </button>
                     )}
                   </div>
@@ -268,27 +269,28 @@ function ShortlistCard({
   onSetTarget: () => void;
   onView: () => void;
 }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
+  const ld = (value: string) => localizeDisplay(value, locale);
   return (
     <div className={`portfolio-card card-glass ${isTarget ? "is-target" : ""}`}>
       <div className="card-top-row">
         <span className="uni-mark">{match.program.shortName.slice(0, 2)}</span>
         <div className="card-badges">
           <ScoreRing value={match.score} size="tiny" />
-          <button className="remove-card-btn" onClick={onRemove} title="Удалить из шорт-листа">
+          <button className="remove-card-btn" onClick={onRemove} title={tr("Удалить из шорт-листа")}>
             ✕
           </button>
         </div>
       </div>
 
       <div className="card-info">
-        <small className="card-city">{match.program.city} • {match.program.duration}</small>
+        <small className="card-city">{ld(match.program.city)} • {ld(match.program.duration)}</small>
         <h4>{match.program.university}</h4>
         <p className="card-sub">{match.program.program}</p>
 
         <div className="price-tag-row">
-          <strong>{match.program.tuitionLabel}</strong>
-          {match.program.untGrant && <small>Грант ЕНТ {match.program.untGrant}+</small>}
+          <strong>{ld(match.program.tuitionLabel)}</strong>
+          {match.program.untGrant && <small>{tr("Грант ЕНТ")} {match.program.untGrant}+</small>}
         </div>
       </div>
 
@@ -299,9 +301,9 @@ function ShortlistCard({
           value={item.category}
           onChange={(e) => onChangeCat(e.target.value as ShortlistItem["category"])}
         >
-          <option value="target">Целевой (Target)</option>
-          <option value="reach">Амбициозный (Reach)</option>
-          <option value="safety">Надёжный (Safety)</option>
+          <option value="target">{ld("Целевой (Target)")}</option>
+          <option value="reach">{ld("Амбициозный (Reach)")}</option>
+          <option value="safety">{ld("Надёжный (Safety)")}</option>
         </select>
       </div>
 

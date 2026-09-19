@@ -532,7 +532,7 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
                 </div>
                 <div className="div-hide is--always">
                   <div className="project-category">
-                    <p className="sm-upper">AITU · КБТУ · 94% Match · 100% Госгрант РК</p>
+                    <p className="sm-upper">{tr("AITU · КБТУ · 94% Match · 100% Госгрант РК")}</p>
                   </div>
                 </div>
               </div>
@@ -607,7 +607,7 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
                   <div className="btn-wrapper" style={{ marginTop: '28px' }}>
                     <a
                       href="#explore"
-                      onClick={(e) => { e.preventDefault(); openModal('recommendations'); }}
+                      onClick={(e) => handleNav('results', 'recommendations', e)}
                       className="btn secondary stagger-text w-inline-block"
                       style={{ opacity: 1, textDecoration: 'none' }}
                     >

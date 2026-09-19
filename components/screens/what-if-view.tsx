@@ -5,6 +5,7 @@ import { ScoreRing } from "@/components/ui/score-ring";
 import { ConfidenceBadge } from "@/components/ui/confidence-badge";
 import { SparkIcon, CheckIcon, Chevron } from "@/components/ui/icons";
 import { useI18n } from "@/components/i18n-provider";
+import { localizeDisplay } from "@/lib/display-localization";
 
 export function WhatIfView({
   profile,
@@ -16,6 +17,7 @@ export function WhatIfView({
   onViewProgram: (programId: string) => void;
 }) {
   const { t, tr, locale } = useI18n();
+  const ld = (value: string) => localizeDisplay(value, locale);
   const [simProfile, setSimProfile] = useState<StudentProfile>({ ...profile });
 
   const patchSim = (patch: Partial<StudentProfile>) => {
@@ -224,10 +226,10 @@ export function WhatIfView({
                   className="range-slider"
                 />
                 <div className="slider-ticks">
-                  <span>1 млн ₸</span>
-                  <span>2.5 млн ₸</span>
-                  <span>4 млн ₸</span>
-                  <span>6 млн ₸</span>
+                  <span>{locale === "en" ? "₸1M" : locale === "kk" ? "1 млн ₸" : "1 млн ₸"}</span>
+                  <span>{locale === "en" ? "₸2.5M" : locale === "kk" ? "2,5 млн ₸" : "2.5 млн ₸"}</span>
+                  <span>{locale === "en" ? "₸4M" : locale === "kk" ? "4 млн ₸" : "4 млн ₸"}</span>
+                  <span>{locale === "en" ? "₸6M" : locale === "kk" ? "6 млн ₸" : "6 млн ₸"}</span>
                 </div>
               </>
             )}
@@ -293,8 +295,8 @@ export function WhatIfView({
                 <div className="state-score-row">
                   <ScoreRing value={currentTop.score} size="small" />
                   <div className="state-meta">
-                    <span>{currentTop.program.tuitionLabel}</span>
-                    <small>{currentTop.program.city}</small>
+                    <span>{ld(currentTop.program.tuitionLabel)}</span>
+                    <small>{ld(currentTop.program.city)}</small>
                   </div>
                 </div>
               </div>
@@ -314,8 +316,8 @@ export function WhatIfView({
                 <div className="state-score-row">
                   <ScoreRing value={simulatedTop.score} size="small" />
                   <div className="state-meta">
-                    <strong className="text-accent">{simulatedTop.program.tuitionLabel}</strong>
-                    <small>{simulatedTop.program.city}</small>
+                    <strong className="text-accent">{ld(simulatedTop.program.tuitionLabel)}</strong>
+                    <small>{ld(simulatedTop.program.city)}</small>
                   </div>
                 </div>
               </div>
@@ -408,10 +410,10 @@ export function WhatIfView({
                     <span className="uni-mark small">{match.program.shortName.slice(0, 2)}</span>
                     <div className="sim-info">
                       <strong>{match.program.university}</strong>
-                      <p>{match.program.program} • {match.program.city}</p>
+                      <p>{ld(match.program.program)} • {ld(match.program.city)}</p>
                     </div>
                     <div className="sim-tuition">
-                      <span>{match.program.tuitionLabel}</span>
+                      <span>{ld(match.program.tuitionLabel)}</span>
                     </div>
                     <ScoreRing value={match.score} size="tiny" />
                     <button

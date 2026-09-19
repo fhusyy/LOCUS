@@ -5,6 +5,7 @@ import { ScoreRing } from "@/components/ui/score-ring";
 import { ConfidenceBadge, CategoryBadge } from "@/components/ui/confidence-badge";
 import { CheckIcon, CloseIcon, ExternalLinkIcon, MapPinIcon, BookmarkIcon } from "@/components/ui/icons";
 import { useI18n } from "@/components/i18n-provider";
+import { localizeDisplay } from "@/lib/display-localization";
 
 export function UniversityModal({
   program,
@@ -25,7 +26,8 @@ export function UniversityModal({
   onToggleShortlist: () => void;
   onSetTarget: () => void;
 }) {
-  const { t, locale } = useI18n();
+  const { t, tr, locale } = useI18n();
+  const ld = (value: string) => localizeDisplay(value, locale);
   const category = match ? categorizeProgram(profile, match) : "target";
   const [aiLoading, setAiLoading] = useState(false);
   const [aiAdvisorText, setAiAdvisorText] = useState<string | null>(null);
@@ -69,11 +71,11 @@ export function UniversityModal({
             <span className="uni-mark large">{program.shortName.slice(0, 2)}</span>
             <div>
               <div className="modal-eyebrow">
-                <span className="location-tag"><MapPinIcon size={14} /> {program.city}, Казахстан</span>
+                <span className="location-tag"><MapPinIcon size={14} /> {ld(program.city)}, {locale === "en" ? "Kazakhstan" : locale === "kk" ? "Қазақстан" : "Казахстан"}</span>
                 <span>•</span>
                 <span>{program.duration}</span>
                 <span>•</span>
-                <span className="lang-tag">Язык: {program.language}</span>
+                <span className="lang-tag">{tr("Язык")}: {ld(program.language)}</span>
               </div>
               <h2>{program.university}</h2>
               <p className="modal-program-name">
@@ -93,40 +95,40 @@ export function UniversityModal({
               <div className="metric-box fit-highlight">
                 <ScoreRing value={match.score} size="small" />
                 <div>
-                  <small>Совместимость</small>
-                  <strong>{match.score}% соответствие</strong>
+                  <small>{tr("Совместимость")}</small>
+                  <strong>{match.score}% {locale === "en" ? "fit" : locale === "kk" ? "сәйкестік" : "соответствие"}</strong>
                   <CategoryBadge category={category} />
                 </div>
               </div>
             )}
             <div className="metric-box">
-              <small>Стоимость обучения</small>
-              <strong>{program.tuitionLabel}</strong>
+              <small>{tr("Стоимость обучения")}</small>
+              <strong>{ld(program.tuitionLabel)}</strong>
               <ConfidenceBadge confidence={program.tuitionConfidence} />
             </div>
             {program.livingCostEstimateKzt && (
               <div className="metric-box">
-                <small>Ориентир проживания</small>
-                <strong>~{formatMoney(program.livingCostEstimateKzt)} / мес</strong>
-                <span className="metric-sub">Общежитие / питание</span>
+                <small>{tr("Ориентир проживания")}</small>
+                <strong>~{formatMoney(program.livingCostEstimateKzt)} / {locale === "en" ? "month" : locale === "kk" ? "ай" : "мес"}</strong>
+                <span className="metric-sub">{locale === "en" ? "Housing / meals" : locale === "kk" ? "Жатақхана / тамақ" : "Общежитие / питание"}</span>
               </div>
             )}
             {program.employmentRate && (
               <div className="metric-box">
-                <small>Трудоустройство</small>
+                <small>{tr("Трудоустройство")}</small>
                 <strong className="text-accent">{program.employmentRate}</strong>
-                <span className="metric-sub">{program.acceptanceRateEstimate || "Селективный приём"}</span>
+                <span className="metric-sub">{program.acceptanceRateEstimate ? ld(program.acceptanceRateEstimate) : locale === "en" ? "Selective admission" : locale === "kk" ? "Іріктеп қабылдау" : "Селективный приём"}</span>
               </div>
             )}
           </div>
 
           {/* UNT Combinations Pill Row */}
           <div className="unt-comb-badge-row">
-            <span>Профильные предметы ЕНТ для этой программы:</span>
+            <span>{locale === "en" ? "UNT subjects for this program:" : locale === "kk" ? "Осы бағдарламаға арналған ҰБТ пәндері:" : "Профильные предметы ЕНТ для этой программы:"}</span>
             <div className="comb-tags">
               {program.untCombinations.map((comb) => (
                 <strong key={comb} className="comb-tag">
-                  {comb}
+                  {ld(comb)}
                 </strong>
               ))}
             </div>
@@ -136,7 +138,7 @@ export function UniversityModal({
           {match && (
             <div className="modal-section match-analysis">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "10px" }}>
-                <h3 style={{ margin: 0 }}>Объективная диагностика профиля</h3>
+                <h3 style={{ margin: 0 }}>{locale === "en" ? "Objective profile assessment" : locale === "kk" ? "Профильдің объективті диагностикасы" : "Объективная диагностика профиля"}</h3>
                 <button
                   className="button small"
                   style={{
@@ -183,27 +185,27 @@ export function UniversityModal({
 
               <div className="analysis-grid">
                 <div className="analysis-card positive">
-                  <h4>✓ Почему подходит твоему выбору</h4>
+                  <h4>✓ {locale === "en" ? "Why it fits your choice" : locale === "kk" ? "Неге таңдауыңа сай" : "Почему подходит твоему выбору"}</h4>
                   <ul>
                     {match.reasons.map((r) => (
                       <li key={r}>
-                        <CheckIcon size={14} /> <span>{r}</span>
+                        <CheckIcon size={14} /> <span>{ld(r)}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
                 <div className="analysis-card attention">
-                  <h4>! На что обратить внимание</h4>
+                  <h4>! {locale === "en" ? "What to watch" : locale === "kk" ? "Неге назар аудару керек" : "На что обратить внимание"}</h4>
                   {match.gaps.length > 0 ? (
                     <ul>
                       {match.gaps.map((g) => (
                         <li key={g}>
-                          <span className="gap-bullet">!</span> <span>{g}</span>
+                          <span className="gap-bullet">!</span> <span>{ld(g)}</span>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="clean-status">У тебя нет критических несовпадений по требованиям этой программы.</p>
+                    <p className="clean-status">{locale === "en" ? "Your profile has no critical requirement gaps for this program." : locale === "kk" ? "Профиліңде бұл бағдарламаның талаптарына қатысты маңызды сәйкессіздік жоқ." : "У тебя нет критических несовпадений по требованиям этой программы."}</p>
                   )}
                 </div>
               </div>
@@ -212,26 +214,26 @@ export function UniversityModal({
 
           {/* Checklist of Requirements */}
           <div className="modal-section">
-            <h3>Чек-лист официальных требований к абитуриенту</h3>
+            <h3>{locale === "en" ? "Official applicant requirements" : locale === "kk" ? "Талапкерге қойылатын ресми талаптар" : "Чек-лист официальных требований к абитуриенту"}</h3>
             <div className="requirements-checklist">
               {program.requirementsChecklist && program.requirementsChecklist.length > 0 ? (
                 program.requirementsChecklist.map((req, i) => (
                   <div className="checklist-item" key={i}>
                     <span className={`check-badge ${req.isMandatory ? "mandatory" : "optional"}`}>
-                      {req.isMandatory ? "Обязательно" : "Рекомендуется"}
+                      {req.isMandatory ? (locale === "en" ? "Required" : locale === "kk" ? "Міндетті" : "Обязательно") : (locale === "en" ? "Recommended" : locale === "kk" ? "Ұсынылады" : "Рекомендуется")}
                     </span>
                     <div>
-                      <strong>{req.label}</strong>
-                      <p>{req.description}</p>
+                      <strong>{ld(req.label)}</strong>
+                      <p>{ld(req.description)}</p>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="checklist-item">
-                  <span className="check-badge mandatory">Обязательно</span>
+                  <span className="check-badge mandatory">{locale === "en" ? "Required" : locale === "kk" ? "Міндетті" : "Обязательно"}</span>
                   <div>
-                    <strong>Сертификат ЕНТ и аттестат</strong>
-                    <p>Порог: {program.untPaid ?? 65}+ баллов</p>
+                    <strong>{locale === "en" ? "UNT certificate and school transcript" : locale === "kk" ? "ҰБТ сертификаты және аттестат" : "Сертификат ЕНТ и аттестат"}</strong>
+                    <p>{locale === "en" ? "Threshold" : locale === "kk" ? "Шек" : "Порог"}: {program.untPaid ?? 65}+ {locale === "en" ? "points" : locale === "kk" ? "балл" : "баллов"}</p>
                   </div>
                 </div>
               )}
@@ -241,16 +243,16 @@ export function UniversityModal({
           {/* Student Reviews / Niche style quotes */}
           {program.reviews && program.reviews.length > 0 && (
             <div className="modal-section">
-              <h3>Отзывы студентов и выпускников</h3>
+              <h3>{locale === "en" ? "Student and alumni reviews" : locale === "kk" ? "Студенттер мен түлектердің пікірлері" : "Отзывы студентов и выпускников"}</h3>
               <div className="reviews-grid">
                 {program.reviews.map((rev, i) => (
                   <div className="review-card" key={i}>
                     <div className="review-head">
                       <strong>{rev.author}</strong>
-                      <span className="review-course">{rev.course}</span>
+                      <span className="review-course">{ld(rev.course)}</span>
                       <span className="review-rating">★ {rev.rating}</span>
                     </div>
-                    <p className="review-quote">«{rev.quote}»</p>
+                    <p className="review-quote">«{ld(rev.quote)}»</p>
                   </div>
                 ))}
               </div>
@@ -260,21 +262,21 @@ export function UniversityModal({
           {/* Scholarship & Campus Information */}
           <div className="modal-section two-col">
             <div className="info-card">
-              <h4>Гранты и финансирование</h4>
-              <p>{program.scholarshipDetails || "Доступны государственные гранты МОН РК по конкурсу ЕНТ."}</p>
+              <h4>{locale === "en" ? "Grants and funding" : locale === "kk" ? "Гранттар және қаржыландыру" : "Гранты и финансирование"}</h4>
+              <p>{program.scholarshipDetails ? ld(program.scholarshipDetails) : locale === "en" ? "State grants are available through the national UNT competition." : locale === "kk" ? "Мемлекеттік гранттар ҰБТ конкурсы арқылы беріледі." : "Доступны государственные гранты МОН РК по конкурсу ЕНТ."}</p>
               {program.untGrant && (
                 <div className="grant-target">
-                  <span>Рекомендуемый ориентир ЕНТ для гранта:</span>
-                  <strong>{program.untGrant}+ баллов</strong>
+                  <span>{locale === "en" ? "Recommended UNT grant benchmark:" : locale === "kk" ? "Грантқа ұсынылатын ҰБТ бағдары:" : "Рекомендуемый ориентир ЕНТ для гранта:"}</span>
+                  <strong>{program.untGrant}+ {locale === "en" ? "points" : locale === "kk" ? "балл" : "баллов"}</strong>
                 </div>
               )}
             </div>
             <div className="info-card">
-              <h4>Кампус и студенческая инфраструктура</h4>
-              <p>{program.campusInfo || "Современная академическая среда с лабораториями и общежитиями."}</p>
+              <h4>{locale === "en" ? "Campus and student facilities" : locale === "kk" ? "Кампус және студенттік инфрақұрылым" : "Кампус и студенческая инфраструктура"}</h4>
+              <p>{program.campusInfo ? ld(program.campusInfo) : locale === "en" ? "A modern academic environment with laboratories and housing." : locale === "kk" ? "Зертханалары мен жатақханалары бар заманауи академиялық орта." : "Современная академическая среда с лабораториями и общежитиями."}</p>
               {program.applicationDeadlineEstimate && (
                 <div className="grant-target">
-                  <span>Ориентир дедлайна приёма:</span>
+                  <span>{locale === "en" ? "Estimated admission deadline:" : locale === "kk" ? "Қабылдау дедлайнының бағдары:" : "Ориентир дедлайна приёма:"}</span>
                   <strong>{program.applicationDeadlineEstimate}</strong>
                 </div>
               )}
@@ -284,9 +286,9 @@ export function UniversityModal({
           {/* Official Transparency Notice */}
           <div className="transparency-callout">
             <div>
-              <strong>Честность и прозрачность данных</strong>
+              <strong>{locale === "en" ? "Transparent data" : locale === "kk" ? "Деректердің ашықтығы" : "Честность и прозрачность данных"}</strong>
               <p>
-                Uniflow агрегирует официальные тарифы и критерии ({program.tuitionYear}). Финальные даты заседаний приёмных комиссий и распределения грантов сверяй на официальном портале вуза.
+                {locale === "en" ? `UniFlow aggregates official tuition and criteria (${program.tuitionYear}). Verify final admission and grant dates on the university’s official website.` : locale === "kk" ? `UniFlow ресми тарифтер мен талаптарды жинақтайды (${program.tuitionYear}). Қабылдау мен гранттың соңғы күндерін ЖОО-ның ресми сайтынан тексер.` : `UniFlow агрегирует официальные тарифы и критерии (${program.tuitionYear}). Финальные даты приёма и распределения грантов сверяй на официальном портале вуза.`}
               </p>
             </div>
             <a
@@ -295,7 +297,7 @@ export function UniversityModal({
               rel="noreferrer"
               className="button outline small external-link-btn"
             >
-              Сайт {program.shortName} <ExternalLinkIcon size={14} />
+              {locale === "en" ? `${program.shortName} website` : locale === "kk" ? `${program.shortName} сайты` : `Сайт ${program.shortName}`} <ExternalLinkIcon size={14} />
             </a>
           </div>
         </div>
@@ -307,7 +309,7 @@ export function UniversityModal({
             onClick={onToggleShortlist}
           >
             <BookmarkIcon filled={isShortlisted} size={16} />
-            {isShortlisted ? "В шорт-листе" : "Добавить в шорт-лист"}
+            {isShortlisted ? tr("В шорт-листе") : tr("Добавить в шорт-лист")}
           </button>
           <button
             className={`button ${isTarget ? "dark disabled" : "primary"}`}
@@ -317,7 +319,7 @@ export function UniversityModal({
               onClose();
             }}
           >
-            {isTarget ? "Выбрано главной целью" : "Выбрать целью и открыть Roadmap →"}
+            {isTarget ? (locale === "en" ? "Selected as primary target" : locale === "kk" ? "Негізгі мақсат ретінде таңдалды" : "Выбрано главной целью") : (locale === "en" ? "Set as target and open roadmap →" : locale === "kk" ? "Мақсат етіп, roadmap ашу →" : "Выбрать целью и открыть Roadmap →")}
           </button>
         </div>
       </div>

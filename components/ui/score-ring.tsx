@@ -1,4 +1,7 @@
+"use client";
+
 import React from "react";
+import { useI18n } from "@/components/i18n-provider";
 
 export function ScoreRing({
   value,
@@ -9,6 +12,7 @@ export function ScoreRing({
   size?: "tiny" | "small" | "normal" | "large";
   showLabel?: boolean;
 }) {
+  const { locale } = useI18n();
   const normalized = Math.max(0, Math.min(100, Math.round(value)));
   const toneClass =
     normalized >= 85 ? "score-high" : normalized >= 70 ? "score-good" : normalized >= 50 ? "score-mid" : "score-low";
@@ -17,7 +21,7 @@ export function ScoreRing({
     <div
       className={`score-ring ${size} ${toneClass}`}
       style={{ "--score": `${normalized * 3.6}deg` } as React.CSSProperties}
-      aria-label={`Совместимость: ${normalized} из 100`}
+      aria-label={locale === "en" ? `Fit: ${normalized} out of 100` : locale === "kk" ? `Сәйкестік: 100-ден ${normalized}` : `Совместимость: ${normalized} из 100`}
     >
       <div className="score-inner">
         <strong>{normalized}</strong>

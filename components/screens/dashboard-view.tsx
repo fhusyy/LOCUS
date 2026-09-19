@@ -4,6 +4,7 @@ import { formatMoney, profileReadiness, buildRoadmap } from "@/lib/matching";
 import { ScoreRing } from "@/components/ui/score-ring";
 import { CheckIcon, SparkIcon, Chevron, BookmarkIcon, SlidersIcon } from "@/components/ui/icons";
 import { useI18n } from "@/components/i18n-provider";
+import { localizeDisplay } from "@/lib/display-localization";
 
 export function DashboardView({
   profile,
@@ -26,13 +27,18 @@ export function DashboardView({
   onViewProgram: (programId: string) => void;
   onEditProfile: () => void;
 }) {
-  const { t, tr } = useI18n();
+  const { t, tr, locale } = useI18n();
+  const ld = (value: string) => localizeDisplay(value, locale);
   const readiness = profileReadiness(profile);
   const tasks = buildRoadmap(profile, targetMatch);
   const nextTask = tasks.find((t) => !completedTasks.includes(t.id));
   const progressPercent = Math.round(
     (completedTasks.filter((id) => tasks.some((t) => t.id === id)).length / Math.max(1, tasks.length)) * 100
   );
+  const localTask = nextTask && locale !== "ru" ? {
+    title: nextTask.id === "shortlist" ? (locale === "en" ? `Finalize your shortlist and verify code ${targetMatch.program.code}` : `${targetMatch.program.code} кодын тексеріп, таңдаулы тізімді бекіт`) : nextTask.id === "documents" ? (locale === "en" ? "Collect the applicant document package" : "Талапкер құжаттарының пакетін жина") : nextTask.id === "verify-deadlines" ? (locale === "en" ? "Apply for the state-grant competition" : "Мемлекеттік грант конкурсына өтінім бер") : nextTask.id === "apply" ? (locale === "en" ? `Complete enrollment at ${targetMatch.program.shortName}` : `${targetMatch.program.shortName} ЖОО-сына қабылдануды аяқта`) : nextTask.id === "unt" ? (locale === "en" ? "Prepare for the UNT" : "ҰБТ-ға дайындал") : (locale === "en" ? "Confirm the language requirement" : "Тіл талабын раста"),
+    description: nextTask.id === "shortlist" ? (locale === "en" ? "Compare your target with 2–3 alternatives." : "Мақсатты нұсқаны 2–3 балама ЖОО-мен салыстыр.") : nextTask.id === "documents" ? (locale === "en" ? "Prepare your ID, certificate, UNT result, and medical documents." : "Жеке куәлік, аттестат, ҰБТ нәтижесі және медициналық құжаттарды дайында.") : nextTask.id === "verify-deadlines" ? (locale === "en" ? "Submit your university choices for the national grant competition." : "Мемлекеттік грант конкурсына ЖОО таңдауларыңды тапсыр.") : nextTask.id === "apply" ? (locale === "en" ? "Submit originals and sign the enrollment agreement." : "Құжат түпнұсқаларын тапсырып, келісімшартқа қол қой.") : nextTask.id === "unt" ? (locale === "en" ? "Take practice tests and strengthen your core subjects." : "Сынақ тесттерін тапсырып, бейіндік пәндерді күшейт.") : (locale === "en" ? "Pass IELTS or the university internal exam." : "IELTS немесе ЖОО-ның ішкі емтиханын тапсыр."),
+  } : nextTask;
 
   return (
     <div className="dashboard-overview container">
@@ -73,9 +79,9 @@ export function DashboardView({
             <div className="action-tag">{tr("Следующий шаг подготовки")}</div>
             <div className="action-main">
               <div className="action-info">
-                <h3>{nextTask.title}</h3>
-                <p>{nextTask.description}</p>
-                <span className="action-deadline">🗓 {nextTask.dateLabel}</span>
+                <h3>{localTask?.title}</h3>
+                <p>{localTask?.description}</p>
+                <span className="action-deadline">🗓 {ld(nextTask.dateLabel)}</span>
               </div>
               <button className="button primary" onClick={() => onToggleTask(nextTask.id)}>
                 <CheckIcon size={16} /> {tr("Отметить выполненным")}
@@ -84,14 +90,14 @@ export function DashboardView({
           </div>
         ) : (
           <div className="dash-next-action-card complete">
-            <div className="action-tag">ВСЕ ШАГИ ВЫПОЛНЕНЫ</div>
+            <div className="action-tag">{locale === "en" ? "ALL STEPS COMPLETED" : locale === "kk" ? "БАРЛЫҚ ҚАДАМ ОРЫНДАЛДЫ" : "ВСЕ ШАГИ ВЫПОЛНЕНЫ"}</div>
             <div className="action-main">
               <div>
-                <h3>Все текущие контрольные точки пройдены!</h3>
-                <p>Проверь официальный статус в приёмной комиссии {targetMatch.program.shortName}.</p>
+                <h3>{locale === "en" ? "All current milestones are complete!" : locale === "kk" ? "Барлық ағымдағы бақылау қадамдары аяқталды!" : "Все текущие контрольные точки пройдены!"}</h3>
+                <p>{locale === "en" ? `Confirm your official status with the ${targetMatch.program.shortName} admissions office.` : locale === "kk" ? `${targetMatch.program.shortName} қабылдау комиссиясынан ресми мәртебеңді нақтыла.` : `Проверь официальный статус в приёмной комиссии ${targetMatch.program.shortName}.`}</p>
               </div>
               <button className="button outline" onClick={() => onNavigate("roadmap")}>
-                Открыть полный Roadmap
+                {locale === "en" ? "Open full roadmap" : locale === "kk" ? "Толық жол картасын ашу" : "Открыть полный Roadmap"}
               </button>
             </div>
           </div>
@@ -114,9 +120,9 @@ export function DashboardView({
               <h3>{targetMatch.program.university}</h3>
               <p className="target-prog-name">{targetMatch.program.program}</p>
               <div className="meta-chips">
-                <span>{targetMatch.program.city}</span>
-                <span>{targetMatch.program.tuitionLabel}</span>
-                <span>ЕНТ {targetMatch.program.untPaid ?? 70}+</span>
+                <span>{ld(targetMatch.program.city)}</span>
+                <span>{ld(targetMatch.program.tuitionLabel)}</span>
+                <span>{locale === "kk" ? "ҰБТ" : "UNT"} {targetMatch.program.untPaid ?? 70}+</span>
               </div>
             </div>
             <ScoreRing value={targetMatch.score} size="normal" />
@@ -150,12 +156,12 @@ export function DashboardView({
           <div className="readiness-flex">
             <ScoreRing value={readiness} size="normal" />
             <div>
-              <strong>{readiness >= 80 ? "Уверенная академическая база" : "Есть понятные зоны роста"}</strong>
+            <strong>{tr(readiness >= 80 ? "Уверенная академическая база" : "Есть понятные зоны роста")}</strong>
               <p>
-                ЕНТ: {profile.unt ? `${profile.unt} баллов` : "не указан"} • GPA: {profile.gpa}/5 • IELTS:{" "}
-                {profile.ielts ? profile.ielts : "не сдан"}
+                {locale === "kk" ? "ҰБТ" : "UNT"}: {profile.unt ? `${profile.unt} ${locale === "en" ? "points" : locale === "kk" ? "балл" : "баллов"}` : (locale === "en" ? "not provided" : locale === "kk" ? "көрсетілмеген" : "не указан")} • GPA: {profile.gpa}/4 • IELTS:{" "}
+                {profile.ielts ? profile.ielts : (locale === "en" ? "not taken" : locale === "kk" ? "тапсырылмаған" : "не сдан")}
               </p>
-              <small className="budget-line">Лимит бюджета: {formatMoney(profile.budget)} в год</small>
+              <small className="budget-line">{locale === "en" ? "Annual budget limit" : locale === "kk" ? "Жылдық бюджет лимиті" : "Лимит бюджета"}: {formatMoney(profile.budget)} {locale === "en" ? "per year" : locale === "kk" ? "жылына" : "в год"}</small>
             </div>
           </div>
 
@@ -170,7 +176,7 @@ export function DashboardView({
               {tr("Сравнить вузы")}
             </button>
             <button className="quick-tile" onClick={() => onNavigate("shortlist")}>
-              Шорт-лист ({shortlist.length})
+              {locale === "en" ? "Shortlist" : locale === "kk" ? "Таңдаулы тізім" : "Шорт-лист"} ({shortlist.length})
             </button>
           </div>
         </div>
@@ -181,7 +187,7 @@ export function DashboardView({
         <div className="preview-heading">
           <div>
             <h2>{t("dashboard.recommendations")}</h2>
-            <p>Диверсифицированный топ лучших университетов Казахстана под твои параметры.</p>
+              <p>{tr("Диверсифицированный топ лучших университетов Казахстана под твои параметры.")}</p>
           </div>
           <button className="button outline small" onClick={() => onNavigate("results")}>
             {tr("Смотреть полную диагностику")} <Chevron size={14} />
@@ -193,7 +199,7 @@ export function DashboardView({
             <div className="dash-match-card card-glass" key={match.program.id}>
               <div className="match-card-head">
                 <span className="uni-mark">{match.program.shortName.slice(0, 2)}</span>
-                <span className="rank-tag">#{index + 1} мэтч</span>
+                <span className="rank-tag">#{index + 1} {tr("мэтч")}</span>
                 <ScoreRing value={match.score} size="tiny" />
               </div>
 
@@ -202,12 +208,12 @@ export function DashboardView({
 
               <div className="dash-card-reasons">
                 <p>
-                  <CheckIcon size={12} /> {match.reasons[0]}
+                  <CheckIcon size={12} /> {ld(match.reasons[0])}
                 </p>
               </div>
 
               <div className="dash-card-foot">
-                <span>{match.program.tuitionLabel}</span>
+                <span>{ld(match.program.tuitionLabel)}</span>
                 <button
                   className="button subtle small"
                   onClick={() => onViewProgram(match.program.id)}
