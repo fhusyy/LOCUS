@@ -640,50 +640,21 @@ footer > div > span { justify-self: end; }
   border-color: rgba(24, 76, 58, 0.22);
 }
 
-/* Keep the original light surfaces of the route cards, while giving all
-   typography sufficient contrast. */
+/* Colored cards also use card-glass for border/shadow. Keep their intended
+   dark surfaces after the generic card background above. */
 .wizard-aside.card-glass {
-  background: linear-gradient(145deg, #ffffff 0%, #f2f9eb 100%);
-  color: var(--ink);
-  border-color: rgba(82, 117, 61, 0.2);
+  background: var(--green);
+  color: #ffffff;
+  border-color: rgba(4, 9, 21, 0.2);
 }
-.wizard-aside.card-glass::after {
-  border-color: rgba(102, 145, 71, 0.18);
-  box-shadow: 0 0 0 45px rgba(149, 196, 103, 0.06), 0 0 0 90px rgba(149, 196, 103, 0.03);
+.next-action.card-glass {
+  background: var(--green);
+  color: #ffffff;
+  border-color: rgba(4, 9, 21, 0.18);
 }
-.wizard-aside.card-glass .aside-number { color: #6e9d45; }
-.wizard-aside.card-glass > p { color: #4c7132; }
-.wizard-aside.card-glass .aside-tip {
-  color: #52645a;
-  border-top-color: rgba(82, 117, 61, 0.22);
-}
-.wizard-aside.card-glass .aside-tip svg { color: #4c7837; }
-.wizard-aside.card-glass h2 { color: var(--ink); }
-.next-action.card-glass,
 .next-action.complete.card-glass {
-  background: linear-gradient(135deg, #ffffff 0%, #f0f8e9 100%);
-  color: var(--ink);
-  border-color: rgba(82, 117, 61, 0.18);
-  box-shadow: 0 16px 38px rgba(28, 51, 43, 0.08);
+  background: #183f35;
 }
-.next-action.card-glass small { color: #4c7132; }
-.next-action.card-glass h2 { color: var(--ink); }
-.next-action.card-glass p { color: #4f6258; }
-.next-action.card-glass div > span {
-  background: rgba(82, 117, 61, 0.1);
-  color: #41584a;
-}
-.dash-next-action-card,
-.dash-next-action-card.complete {
-  background: linear-gradient(135deg, #ffffff 0%, #f0f8e9 100%);
-  color: var(--ink);
-  border: 1px solid rgba(82, 117, 61, 0.18);
-  box-shadow: 0 10px 30px rgba(28, 51, 43, 0.05);
-}
-.dash-next-action-card .action-tag { color: #4c7132; }
-.dash-next-action-card .action-info p { color: #4f6258; }
-.dash-next-action-card .action-deadline { color: #52645a; }
-.dash-next-action-card .button.outline { color: var(--ink); }
 
 .eyebrow-pill {
   display: inline-flex;
@@ -883,10 +854,8 @@ footer > div > span { justify-self: end; }
 
 .dash-next-action-card {
   margin-top: 24px;
-  background: linear-gradient(135deg, #ffffff 0%, #f0f8e9 100%);
-  color: var(--ink);
-  border: 1px solid rgba(82, 117, 61, 0.18);
-  box-shadow: 0 10px 30px rgba(28, 51, 43, 0.05);
+  background: var(--ink);
+  color: white;
   border-radius: 16px;
   padding: 22px 26px;
   display: flex;
@@ -894,13 +863,13 @@ footer > div > span { justify-self: end; }
   gap: 8px;
 }
 .dash-next-action-card.complete {
-  background: linear-gradient(135deg, #ffffff 0%, #e6f5dc 100%);
+  background: var(--green);
 }
 .action-tag {
   font-size: 10.5px;
   letter-spacing: 0.08em;
   font-weight: 800;
-  color: #4c7132;
+  color: var(--mint);
   text-transform: uppercase;
 }
 .action-main {
@@ -917,11 +886,11 @@ footer > div > span { justify-self: end; }
 .action-info p {
   margin: 0 0 8px;
   font-size: 14px;
-  color: #4f6258;
+  color: #c9d6d0;
 }
 .action-deadline {
   font-size: 12px;
-  color: #52645a;
+  color: #a4b8af;
 }
 
 .dash-split-grid {

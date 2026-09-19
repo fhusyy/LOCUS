@@ -73,14 +73,14 @@ try {
   await page.getByRole("heading", { name: /Привет, Алия/ }).waitFor();
   const overviewActionVisuals = await page.locator(".dash-next-action-card").evaluate((element) => {
     const style = getComputedStyle(element);
-    return { backgroundImage: style.backgroundImage, color: style.color };
+    return { backgroundColor: style.backgroundColor, color: style.color };
   });
   expect(
-    overviewActionVisuals.backgroundImage.includes("linear-gradient"),
-    "Overview action card must keep its light highlighted background",
+    overviewActionVisuals.backgroundColor === "rgb(4, 9, 21)",
+    `Overview action card lost the original palette: ${overviewActionVisuals.backgroundColor}`,
   );
   expect(
-    overviewActionVisuals.color === "rgb(4, 9, 21)",
+    overviewActionVisuals.color === "rgb(255, 255, 255)",
     `Overview action text is not readable: ${overviewActionVisuals.color}`,
   );
   await page.getByRole("button", { name: "Рекомендации", exact: true }).click();
@@ -99,10 +99,10 @@ try {
   await page.getByRole("heading", { name: /Твой путь поступления/ }).waitFor();
   const roadmapVisuals = await page.locator(".next-action").evaluate((element) => {
     const style = getComputedStyle(element);
-    return { backgroundImage: style.backgroundImage, color: style.color };
+    return { backgroundColor: style.backgroundColor, color: style.color };
   });
-  expect(roadmapVisuals.backgroundImage.includes("linear-gradient"), "Roadmap action card must keep its light highlighted background");
-  expect(roadmapVisuals.color === "rgb(4, 9, 21)", `Roadmap action text is not readable: ${roadmapVisuals.color}`);
+  expect(roadmapVisuals.backgroundColor === "rgb(11, 26, 48)", `Roadmap action card lost the original palette: ${roadmapVisuals.backgroundColor}`);
+  expect(roadmapVisuals.color === "rgb(255, 255, 255)", `Roadmap action text is not readable: ${roadmapVisuals.color}`);
   const progressOverflow = await page.locator(".route-progress").evaluate((element) => element.scrollWidth - element.clientWidth);
   expect(progressOverflow <= 1, `Roadmap progress text overflows its card by ${progressOverflow}px`);
   await page.screenshot({ path: `${output}/03-roadmap-contrast.png`, fullPage: false });
