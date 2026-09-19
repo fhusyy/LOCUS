@@ -16,6 +16,7 @@ try {
   const page = await desktop.newPage();
   const consoleErrors = [];
   const failedResources = [];
+
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
@@ -26,93 +27,29 @@ try {
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: /Твой путь к университету/ }).waitFor();
 
+  const landingHeader = page.locator(".nav-parent nav");
+  expect(await landingHeader.getByRole("button", { name: "Войти", exact: true }).count() === 1, "Landing header must contain Login");
+  expect(await landingHeader.getByRole("link", { name: /Построить мой маршрут/ }).count() === 1, "Landing header must contain the route CTA");
+  expect(await landingHeader.locator(".navlinks").count() === 0, "Landing header must not expose product navigation");
+
+  await landingHeader.getByRole("link", { name: /Построить мой маршрут/ }).click();
+  await page.getByText("Твой персональный навигатор поступления", { exact: true }).waitFor();
+  expect(await page.getByText(/Быстрый тестовый вход/).count() === 0, "Demo login must not bypass Supabase authentication");
+  await page.getByRole("button", { name: "Закрыть" }).click();
+
   await page.getByRole("button", { name: "EN", exact: true }).click();
   await page.getByRole("heading", { name: /Your path to university/ }).waitFor();
   expect(await page.locator("html").getAttribute("lang") === "en", "HTML lang did not switch to English");
-
   await page.getByRole("button", { name: "ҚАЗ", exact: true }).click();
   await page.getByRole("heading", { name: /Университетке апарар жолың/ }).waitFor();
   expect(await page.locator("html").getAttribute("lang") === "kk", "HTML lang did not switch to Kazakh");
-
   await page.getByRole("button", { name: "RU", exact: true }).click();
-  await page.getByRole("heading", { name: /Твой путь к университету/ }).waitFor();
-  await page.screenshot({ path: `${output}/01-landing-locales.png`, fullPage: false });
 
-  // The demo profile is intentionally preloaded on first launch. Sign out so
-  // the smoke test covers the complete questionnaire from an empty profile.
-  await page.getByRole("button", { name: /Алия/ }).click();
-  await page.getByRole("button", { name: /Выйти из аккаунта/ }).click();
-  await page.locator("header.hero").getByRole("link", { name: /Построить мой маршрут/ }).click();
-  await page.getByRole("heading", { name: /Кто ты и когда планируешь поступать/ }).waitFor();
-
-  expect(await page.getByRole("button", { name: /Что если\?/ }).count() === 0, "What-if must be hidden until onboarding is complete");
-  await page.getByRole("button", { name: "EN", exact: true }).click();
-  await page.getByText("to personalize your route", { exact: true }).waitFor();
-  expect(await page.getByPlaceholder("For example, Aliya").isVisible(), "English onboarding hint was not translated");
-  expect(await page.getByRole("button", { name: "Grade 11", exact: true }).isVisible(), "Grade option was not translated");
-
-  // Native/browser Back must return to the previous UniFlow screen instead of
-  // closing the app or leaving the site.
-  await page.goBack();
-  await page.getByRole("heading", { name: /Your path to university/ }).waitFor();
-  await page.locator("header.hero").getByRole("link", { name: /Build my route/ }).click();
-  await page.getByRole("button", { name: "RU", exact: true }).click();
-  await page.getByRole("heading", { name: /Кто ты и когда планируешь поступать/ }).waitFor();
-  await page.getByLabel(/Как тебя зовут/).fill("Алия");
-  await page.getByRole("button", { name: /Продолжить/ }).click();
-
-  await page.getByRole("button", { name: /Cybersecurity/ }).first().click();
-  await page.getByRole("button", { name: /Продолжить/ }).click();
-  await page.getByLabel(/Балл ЕНТ/).fill("108");
-  await page.getByLabel(/Сертификат IELTS/).fill("6.5");
-  await page.getByRole("button", { name: /Продолжить/ }).click();
-  await page.getByRole("button", { name: /до 2.5 млн/ }).click();
-  await page.getByRole("button", { name: /Продолжить/ }).click();
-  await page.getByRole("button", { name: /Построить персональный маршрут/ }).click();
-
-  await page.getByRole("heading", { name: /Привет, Алия/ }).waitFor();
-  const overviewActionVisuals = await page.locator(".dash-next-action-card").evaluate((element) => {
-    const style = getComputedStyle(element);
-    return { backgroundImage: style.backgroundImage, color: style.color };
-  });
-  expect(
-    overviewActionVisuals.backgroundImage.includes("linear-gradient"),
-    "Overview action card must use the light white-green surface",
-  );
-  expect(
-    overviewActionVisuals.color === "rgb(4, 9, 21)",
-    `Overview action text is not readable: ${overviewActionVisuals.color}`,
-  );
-  await page.screenshot({ path: `${output}/02-overview-light-action.png`, fullPage: false });
-  await page.getByRole("button", { name: "Рекомендации", exact: true }).click();
-  await page.getByRole("heading", { name: /персональный вектор поступления/ }).waitFor();
-  await page.getByRole("button", { name: /AI-подбор по 106 вузам/ }).waitFor();
-
-  const cards = await page.locator(".match-card").count();
-  expect(cards >= 3, `Expected at least 3 recommendation cards, received ${cards}`);
-  await page.screenshot({ path: `${output}/02-results-ai-entry.png`, fullPage: false });
-
-  await page.getByRole("button", { name: /Карточка вуза/ }).first().click();
-  await page.getByRole("button", { name: /Спросить Gemini AI/ }).waitFor();
+  await page.locator(".project-card-wrapper").click();
+  await page.getByText("Твой персональный навигатор поступления", { exact: true }).waitFor();
+  await page.waitForTimeout(350);
+  await page.screenshot({ path: `${output}/01-auth-required.png`, fullPage: false });
   await page.getByRole("button", { name: "Закрыть" }).click();
-
-  await page.getByRole("button", { name: "Маршрут", exact: true }).click();
-  await page.getByRole("heading", { name: /Твой путь поступления/ }).waitFor();
-  const roadmapVisuals = await page.locator(".next-action").evaluate((element) => {
-    const style = getComputedStyle(element);
-    return { backgroundColor: style.backgroundColor, color: style.color };
-  });
-  expect(
-    roadmapVisuals.backgroundColor === "rgba(255, 255, 250, 0.88)",
-    `Roadmap action card lost the 782faac palette: ${roadmapVisuals.backgroundColor}`,
-  );
-  expect(roadmapVisuals.color === "rgb(4, 9, 21)", `Roadmap action text is not readable: ${roadmapVisuals.color}`);
-  const progressOverflow = await page.locator(".route-progress").evaluate((element) => element.scrollWidth - element.clientWidth);
-  expect(progressOverflow <= 1, `Roadmap progress text overflows its card by ${progressOverflow}px`);
-  await page.screenshot({ path: `${output}/03-roadmap-contrast.png`, fullPage: false });
-
-  await page.goBack();
-  await page.getByRole("heading", { name: /персональный вектор поступления/ }).waitFor();
 
   expect(failedResources.length === 0, `Failed browser resources: ${failedResources.join(" | ")}`);
   expect(consoleErrors.length === 0, `Browser console errors: ${consoleErrors.join(" | ")}`);
@@ -125,10 +62,10 @@ try {
   await mobilePage.getByRole("heading", { name: /all in one place/i }).waitFor();
   const overflow = await mobilePage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow <= 1, `Mobile horizontal overflow: ${overflow}px`);
-  await mobilePage.screenshot({ path: `${output}/04-landing-mobile-en.png`, fullPage: false });
+  await mobilePage.screenshot({ path: `${output}/02-landing-mobile-en.png`, fullPage: false });
   await mobile.close();
 
-  console.log(`Smoke test passed: ${cards} recommendations, history Back, translated hints, roadmap palette/progress, modal, and mobile overflow.`);
+  console.log("Smoke test passed: auth-gated landing, simplified header, locales, protected showcase, and mobile overflow.");
 } finally {
   await browser.close();
 }

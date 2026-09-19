@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { supabase, syncToCloud, saveLocalState } from "@/lib/supabase";
+import { createPortal } from "react-dom";
+import { supabase } from "@/lib/supabase";
 import type { StudentProfile, Interest } from "@/lib/types";
 import { CheckIcon, SparkIcon } from "@/components/ui/icons";
 
@@ -70,7 +71,7 @@ export function AuthModal({
       // Helpful fallback if Google provider isn't enabled in Supabase project dashboard yet
       setErrorMsg(
         err.message?.includes("provider is not enabled")
-          ? "Google авторизация пока не включена в Supabase Dashboard (Auth -> Providers -> Google). Используйте вход по Email или Демо-вход."
+          ? "Google авторизация пока не включена в Supabase Dashboard (Auth → Providers → Google). Используйте вход по Email."
           : `Ошибка входа через Google: ${err.message || "попробуйте снова"}`
       );
     }
@@ -98,15 +99,8 @@ export function AuthModal({
         password: loginPassword,
       });
 
-      if (error) {
-        // If email not found or invalid credentials, give clear message
-        if (error.message.includes("Invalid login credentials")) {
-          // Graceful fallback for local test
-          console.warn("Invalid credentials in Supabase:", error.message);
-        } else {
-          console.warn("Supabase auth note:", error.message);
-        }
-      }
+      if (error) throw error;
+      if (!data.user || !data.session) throw new Error("Не удалось создать активную сессию. Попробуйте войти ещё раз.");
 
       // Extract user metadata or construct profile
       const derivedName = data?.user?.user_metadata?.name || loginEmail.split("@")[0] || "Абитуриент";
@@ -114,8 +108,6 @@ export function AuthModal({
 
       const userProfile: Partial<StudentProfile> = {
         name: data?.user?.user_metadata?.name || formattedName,
-        unt: data?.user?.user_metadata?.unt || 118,
-        interest: data?.user?.user_metadata?.interest || "computer-science",
       };
 
       setSuccessMsg("Успешный вход в UniFlow через Supabase! Загружаем маршрут...");
@@ -165,9 +157,7 @@ export function AuthModal({
         },
       });
 
-      if (error) {
-        console.warn("Supabase signup note:", error.message);
-      }
+      if (error) throw error;
 
       const newProfile: Partial<StudentProfile> = {
         name: regName.trim(),
@@ -178,27 +168,12 @@ export function AuthModal({
         homeCity: regCity,
       };
 
-      // Save to Supabase table
-      syncToCloud({
-        profile: {
-          name: regName.trim(),
-          grade: regGrade,
-          enrollmentYear: 2027,
-          homeCity: regCity,
-          preferredCities: ["Астана", "Алматы"],
-          interests: [regInterest],
-          interest: regInterest,
-          favoriteSubjects: ["Математика", "Информатика"],
-          untCombination: "Математика + Информатика",
-          gpa: 3.8,
-          budget: 2500000,
-          onlyGrant: false,
-          scholarshipImportant: true,
-          language: "Казахский / русский",
-          careerFocus: "Big Tech & Релокейт",
-          unt: regUnt,
-        },
-      });
+      if (!data.session || !data.user) {
+        setLoading(false);
+        setSuccessMsg("Аккаунт создан. Подтвердите email по ссылке в письме, затем войдите в UniFlow.");
+        setMode("login");
+        return;
+      }
 
       setSuccessMsg("Аккаунт создан в Supabase! Формируем вашу дорожную карту...");
       setTimeout(() => {
@@ -212,25 +187,7 @@ export function AuthModal({
     }
   };
 
-  const handleDemoLogin = (profileData: { name: string; unt: number; interest: Interest; city: string }) => {
-    setLoading(true);
-    setErrorMsg("");
-    setSuccessMsg(`Вход под демо-профилем: ${profileData.name}...`);
-
-    setTimeout(() => {
-      setLoading(false);
-      onSuccess({
-        name: profileData.name,
-        unt: profileData.unt,
-        interest: profileData.interest,
-        interests: [profileData.interest],
-        homeCity: profileData.city,
-      });
-      onClose();
-    }, 450);
-  };
-
-  return (
+  return createPortal(
     <div
       className="auth-modal-overlay"
       onClick={(e) => {
@@ -523,7 +480,7 @@ export function AuthModal({
                     href="#forgot"
                     onClick={(e) => {
                       e.preventDefault();
-                      alert("Для сброса пароля отправьте запрос на support@uniflow.kz или используйте быстрый демо-вход.");
+                      alert("Для сброса пароля отправьте запрос на support@uniflow.kz.");
                     }}
                     style={{ fontSize: "12px", color: "#FE7505", textDecoration: "none", fontWeight: 600 }}
                   >
@@ -606,61 +563,6 @@ export function AuthModal({
                 {loading ? "Вход..." : "Войти в личный кабинет →"}
               </button>
 
-              {/* DEMO ACCOUNTS ONE-CLICK LOGIN */}
-              <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid #F0F2F5" }}>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: "#6B7280", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                  Быстрый тестовый вход (1 клик):
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <button
-                    type="button"
-                    onClick={() => handleDemoLogin({ name: "Алия Сапарова", unt: 122, interest: "data-science", city: "Астана" })}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "8px 12px",
-                      borderRadius: "10px",
-                      border: "1px solid #E5E7EB",
-                      background: "#F9FAFB",
-                      fontSize: "13px",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      color: "#111827",
-                      transition: "background-color 0.15s",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#EFF6FF")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "#F9FAFB")}
-                  >
-                    <span><strong>Алия Сапарова</strong> (11 класс, ЕНТ 122)</span>
-                    <span style={{ fontSize: "11px", color: "#FE7505", fontWeight: 600 }}>Data Science →</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDemoLogin({ name: "Данияр Каримов", unt: 115, interest: "finance-fintech", city: "Алматы" })}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "8px 12px",
-                      borderRadius: "10px",
-                      border: "1px solid #E5E7EB",
-                      background: "#F9FAFB",
-                      fontSize: "13px",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      color: "#111827",
-                      transition: "background-color 0.15s",
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = "#EFF6FF")}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = "#F9FAFB")}
-                  >
-                    <span><strong>Данияр Каримов</strong> (ЕНТ 115)</span>
-                    <span style={{ fontSize: "11px", color: "#2652B9", fontWeight: 600 }}>Финтех & КИМЭП →</span>
-                  </button>
-                </div>
-              </div>
             </form>
           )}
 
@@ -832,6 +734,7 @@ export function AuthModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

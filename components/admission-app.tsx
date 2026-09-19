@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { Session, User } from "@supabase/supabase-js";
 import { buildRoadmap, formatMoney, matchPrograms, profileReadiness, categorizeProgram } from "@/lib/matching";
 import type {
   City,
@@ -16,7 +17,7 @@ import type {
   CareerFocus,
 } from "@/lib/types";
 import { programs } from "@/lib/programs";
-import { loadLocalState, saveLocalState, syncToCloud, supabase } from "@/lib/supabase";
+import { loadAccountState, syncToCloud, supabase } from "@/lib/supabase";
 
 import { ScoreRing } from "@/components/ui/score-ring";
 import { ConfidenceBadge, CategoryBadge } from "@/components/ui/confidence-badge";
@@ -191,72 +192,39 @@ export const careerFocusesList: CareerFocus[] = [
   "Неважно",
 ];
 
-const defaultProfile: StudentProfile = {
-  name: "Алия",
+const blankProfile: StudentProfile = {
+  name: "",
   grade: "11",
-  homeCity: "Шымкент",
+  homeCity: "",
   enrollmentYear: 2027,
-  interests: ["data-science", "computer-science"],
-  interest: "data-science",
-  untCombination: "Математика + Информатика",
-  favoriteSubjects: ["Математика", "Информатика", "Английский язык"],
-  gpa: 3.85, // 4.0 scale
-  unt: 108,
-  ielts: 6.0,
-  preferredCities: ["Астана", "Алматы"],
+  interests: [],
+  interest: undefined,
+  untCombination: "Ещё не определился",
+  favoriteSubjects: [],
+  gpa: 0,
+  unt: undefined,
+  ielts: undefined,
+  preferredCities: [],
   preferredCountries: ["Казахстан"],
-  budget: 2_500_000,
+  budget: 0,
   onlyGrant: false,
   scholarshipImportant: true,
-  language: "Казахский / русский",
-  careerFocus: "Big Tech & Релокейт",
-  dormitoryNeeded: true,
+  language: "Неважно",
+  careerFocus: "Неважно",
+  dormitoryNeeded: false,
   militaryDepartment: false,
 };
 
-const demoProfiles: Record<string, StudentProfile> = {
-  aliya: defaultProfile,
-  sanzhar: {
-    name: "Санжар",
-    grade: "11",
-    homeCity: "Алматы",
-    enrollmentYear: 2027,
-    interests: ["cybersecurity", "software-engineering"],
-    interest: "cybersecurity",
-    untCombination: "Математика + Информатика",
-    favoriteSubjects: ["Информатика", "Физика"],
-    gpa: 3.65,
-    unt: 92,
-    ielts: 5.5,
-    preferredCities: ["Алматы", "Каскелен"],
-    budget: 1_600_000,
-    onlyGrant: true,
-    scholarshipImportant: true,
-    language: "Казахский / русский",
-    careerFocus: "Кибербезопасность & SOC",
-    dormitoryNeeded: true,
-  },
-  damir: {
-    name: "Дамир",
-    grade: "10",
-    homeCity: "Астана",
-    enrollmentYear: 2028,
-    interests: ["software-engineering", "robotics-mechatronics"],
-    interest: "software-engineering",
-    untCombination: "Математика + Физика",
-    favoriteSubjects: ["Математика", "Информатика", "Английский язык"],
-    gpa: 3.95,
-    unt: undefined,
-    ielts: undefined,
-    preferredCities: ["Астана", "Алматы"],
-    budget: 3_500_000,
-    onlyGrant: false,
-    scholarshipImportant: false,
-    language: "Английский",
-    careerFocus: "Стартапы & Astana Hub",
-    dormitoryNeeded: false,
-  },
-};
+function hasCompleteProfile(profile: StudentProfile) {
+  return Boolean(
+    profile.name.trim() &&
+    profile.homeCity.trim() &&
+    profile.interests.length > 0 &&
+    profile.gpa >= 2 &&
+    profile.preferredCities.length > 0 &&
+    (profile.onlyGrant || profile.budget > 0)
+  );
+}
 
 const subjects = [
   "Математика",
@@ -307,20 +275,17 @@ function Logo() {
 
 export function AdmissionApp() {
   const { t } = useI18n();
-  const [mounted, setMounted] = useState(false);
   const [screen, setScreen] = useState<Screen>("landing");
   const screenRef = useRef<Screen>("landing");
-  const [profile, setProfile] = useState<StudentProfile>(defaultProfile);
+  const [profile, setProfile] = useState<StudentProfile>(blankProfile);
+  const profileCompleteRef = useRef(false);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const authUserIdRef = useRef<string | null>(null);
+  const [profileHydrated, setProfileHydrated] = useState(false);
   const [targetId, setTargetId] = useState<string>("aitu-big-data");
-  const [completed, setCompleted] = useState<string[]>(["shortlist"]);
-  const [shortlist, setShortlist] = useState<ShortlistItem[]>([
-    { programId: "aitu-big-data", category: "target", addedAt: new Date().toISOString() },
-    { programId: "kbtu-se", category: "reach", addedAt: new Date().toISOString() },
-    { programId: "iitu-is", category: "safety", addedAt: new Date().toISOString() },
-  ]);
-  const [applications, setApplications] = useState<ApplicationItem[]>([
-    { programId: "aitu-big-data", stage: "documents", updatedAt: new Date().toISOString(), completedTasks: [] },
-  ]);
+  const [completed, setCompleted] = useState<string[]>([]);
+  const [shortlist, setShortlist] = useState<ShortlistItem[]>([]);
+  const [applications, setApplications] = useState<ApplicationItem[]>([]);
 
   const [notice, setNotice] = useState("");
   const [cloudStatus, setCloudStatus] = useState<string>("Подключено к Supabase");
@@ -328,27 +293,53 @@ export function AdmissionApp() {
   const [modalProgramId, setModalProgramId] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Load from local/saved state on mount + listen to Supabase Auth state (e.g. Google OAuth redirect)
-  useEffect(() => {
-    setMounted(true);
-    const saved = loadLocalState();
-    if (saved.profile) setProfile(saved.profile);
-    if (saved.targetId) setTargetId(saved.targetId);
-    if (saved.completed) setCompleted(saved.completed);
-    if (saved.shortlist) setShortlist(saved.shortlist);
-    if (saved.applications) setApplications(saved.applications);
+  const hydrateAccount = async (user: User, seed: Partial<StudentProfile> = {}) => {
+    authUserIdRef.current = user.id;
+    setAuthUserId(user.id);
+    setProfileHydrated(false);
 
-    // Supabase auth state listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event: string, session: any) => {
+    const saved = await loadAccountState(user.id);
+    const metadataName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "";
+    const loadedProfile: StudentProfile = {
+      ...blankProfile,
+      ...seed,
+      ...(saved.profile ?? {}),
+      name: saved.profile?.name || seed.name || metadataName,
+    };
+
+    setProfile(loadedProfile);
+    setTargetId(saved.targetId ?? "aitu-big-data");
+    setCompleted(saved.completed ?? []);
+    setShortlist(saved.shortlist ?? []);
+    setApplications(saved.applications ?? []);
+    profileCompleteRef.current = hasCompleteProfile(loadedProfile);
+    setProfileHydrated(true);
+    setCloudStatus(saved.profile ? "Профиль загружен из Supabase" : "Аккаунт подключён — заполните анкету");
+    return loadedProfile;
+  };
+
+  // Load only the state owned by the authenticated Supabase account.
+  useEffect(() => {
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) void hydrateAccount(data.session.user);
+    });
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event: string, session: Session | null) => {
       if (session?.user) {
-        const u = session.user;
-        const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split("@")[0] || "Пользователь";
-        setProfile((prev) => ({
-          ...prev,
-          name: name.charAt(0).toUpperCase() + name.slice(1),
-        }));
-        setCloudStatus("Supabase Auth: Авторизован");
+        window.setTimeout(() => void hydrateAccount(session.user), 0);
+        return;
       }
+
+      authUserIdRef.current = null;
+      profileCompleteRef.current = false;
+      setAuthUserId(null);
+      setProfileHydrated(false);
+      setProfile(blankProfile);
+      setTargetId("aitu-big-data");
+      setCompleted([]);
+      setShortlist([]);
+      setApplications([]);
+      setCloudStatus("Войдите, чтобы сохранить маршрут");
     });
 
     return () => {
@@ -365,7 +356,12 @@ export function AdmissionApp() {
     window.history.replaceState({ ...currentState, uniflowScreen: screenRef.current }, "", window.location.href);
 
     const handlePopState = (event: PopStateEvent) => {
-      const previousScreen = isAppScreen(event.state?.uniflowScreen) ? event.state.uniflowScreen : "landing";
+      const requested = isAppScreen(event.state?.uniflowScreen) ? event.state.uniflowScreen : "landing";
+      const previousScreen = requested !== "landing" && !authUserIdRef.current
+        ? "landing"
+        : requested !== "landing" && requested !== "onboarding" && !profileCompleteRef.current
+        ? "onboarding"
+        : requested;
       screenRef.current = previousScreen;
       setScreen(previousScreen);
       setMobileMenuOpen(false);
@@ -378,12 +374,12 @@ export function AdmissionApp() {
 
   // Save changes and sync to Supabase
   useEffect(() => {
-    if (!mounted) return;
-    saveLocalState({ profile, targetId, completed, shortlist, applications });
+    profileCompleteRef.current = hasCompleteProfile(profile);
+    if (!authUserId || !profileHydrated) return;
     syncToCloud({ profile, targetId, completed, shortlist, applications }).then((res) => {
       setCloudStatus(res.message);
     });
-  }, [mounted, profile, targetId, completed, shortlist, applications]);
+  }, [authUserId, profileHydrated, profile, targetId, completed, shortlist, applications]);
 
   // Matches calculation
   const allMatches = useMemo(() => matchPrograms(profile), [profile]);
@@ -394,7 +390,11 @@ export function AdmissionApp() {
   const modalMatch = modalProgramId ? allMatches.find((m) => m.program.id === modalProgramId) : undefined;
 
   const navigate = (next: Screen) => {
-    const safeNext = next === "what-if" && !profile.name.trim() ? "onboarding" : next;
+    const safeNext = next !== "landing" && !authUserIdRef.current
+      ? "landing"
+      : next !== "landing" && next !== "onboarding" && !hasCompleteProfile(profile)
+      ? "onboarding"
+      : next;
     if (screenRef.current === safeNext) {
       setMobileMenuOpen(false);
       return;
@@ -462,6 +462,10 @@ export function AdmissionApp() {
   };
 
   const completeProfile = () => {
+    if (!hasCompleteProfile(profile)) {
+      setNotice("Заполни обязательные поля профиля перед построением маршрута.");
+      return;
+    }
     const nextTop = diversified(matchPrograms(profile), 1)[0];
     if (editingFrom) {
       const previous = allMatches.find((item) => item.program.id === editingFrom)?.program.shortName;
@@ -476,24 +480,21 @@ export function AdmissionApp() {
     navigate("dashboard");
   };
 
-  const loadDemo = (key: string = "aliya") => {
-    const selected = demoProfiles[key] ?? defaultProfile;
-    setProfile(selected);
-    const m = matchPrograms(selected);
-    setTargetId(m[0]?.program.id ?? "aitu-big-data");
-    setNotice(`Загружен демонстрационный профиль: ${selected.name} (${selected.interest})`);
-    navigate("dashboard");
-  };
-
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
     } catch (e) {
       console.warn("SignOut error:", e);
     }
-    const emptyProfile: StudentProfile = { ...defaultProfile, name: "" };
-    setProfile(emptyProfile);
-    saveLocalState({ profile: emptyProfile, targetId: "aitu-big-data", completed: [], shortlist: [], applications: [] });
+    authUserIdRef.current = null;
+    profileCompleteRef.current = false;
+    setAuthUserId(null);
+    setProfileHydrated(false);
+    setProfile(blankProfile);
+    setTargetId("aitu-big-data");
+    setCompleted([]);
+    setShortlist([]);
+    setApplications([]);
     setNotice("Вы вышли из аккаунта");
     navigate("landing");
   };
@@ -545,24 +546,8 @@ export function AdmissionApp() {
             ) : <div aria-hidden="true" />}
 
             <div className="header-meta">
-              {!inProduct ? (
-                <div className="landing-topbar-actions">
-                  <button className="btn nav-ghost" onClick={() => loadDemo("aliya")}>
-                    {t("nav.demo")}
-                  </button>
-                  <button
-                    className="btn btn-gradient nav-cta"
-                    onClick={() => {
-                      if (!profile.name) setProfile({ ...defaultProfile, name: "" });
-                      navigate(profile.name ? "dashboard" : "onboarding");
-                    }}
-                  >
-                    {profile.name ? t("nav.account") : t("nav.choose")}
-                  </button>
-                </div>
-              ) : (
+              {authUserId && (
                 <>
-
                   <button className="button subtle small profile-pill-btn" onClick={editProfile}>
                     {profile.name || "Профиль"}
                   </button>
@@ -592,24 +577,18 @@ export function AdmissionApp() {
       {screen === "landing" && (
         <LandingPage
           profile={profile}
+          isAuthenticated={Boolean(authUserId)}
           onLogout={handleLogout}
           onStart={() => {
-            if (profile.name && profile.name.trim().length > 0) {
-              navigate("dashboard");
-            } else {
-              setProfile({ ...defaultProfile, name: "" });
-              navigate("onboarding");
-            }
+            navigate(hasCompleteProfile(profile) ? "dashboard" : "onboarding");
           }}
-          onNavigate={(s) => navigate(s as any)}
-          onDemo={(p) => loadDemo(p)}
-          onAuthSuccess={(authProfile) => {
-            const updated = { ...profile, ...authProfile };
-            setProfile(updated);
-            const m = matchPrograms(updated);
-            setTargetId(m[0]?.program.id ?? "aitu-big-data");
-            setNotice(`Вход выполнен: ${updated.name || "Пользователь"}`);
-            navigate("dashboard");
+          onNavigate={(s) => navigate(s as Screen)}
+          onAuthSuccess={async (authProfile) => {
+            const { data } = await supabase.auth.getUser();
+            if (!data.user) return;
+            const loaded = await hydrateAccount(data.user, authProfile);
+            setNotice(`Вход выполнен: ${loaded.name || "Пользователь"}`);
+            navigate(hasCompleteProfile(loaded) ? "dashboard" : "onboarding");
           }}
         />
       )}
@@ -820,7 +799,16 @@ function OnboardingScreen({
 
   const next = () => (step < 4 ? setStep(step + 1) : onComplete());
   const back = () => (step > 0 ? setStep(step - 1) : onCancel());
-  const canContinue = step !== 0 || profile.homeCity.trim().length > 1;
+  const canContinue =
+    step === 0
+      ? profile.name.trim().length > 1 && profile.homeCity.trim().length > 1
+      : step === 1
+      ? selectedInterests.length > 0
+      : step === 2
+      ? profile.gpa >= 2 && profile.gpa <= 4
+      : step === 3
+      ? profile.preferredCities.length > 0 && (profile.onlyGrant || profile.budget > 0)
+      : hasCompleteProfile(profile);
 
   return (
     <main className="onboarding container">
@@ -1111,7 +1099,7 @@ function OnboardingScreen({
                     min="2.0"
                     max="4.0"
                     step="0.05"
-                    value={profile.gpa}
+                    value={profile.gpa || ""}
                     onChange={(e) => patch({ gpa: Number(e.target.value) })}
                   />
                   <span>/ 4.0</span>

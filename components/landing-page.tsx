@@ -89,13 +89,13 @@ import type { StudentProfile } from '@/lib/types';
 export interface LandingPageProps {
   onStart?: () => void;
   onNavigate?: (screen: string) => void;
-  onDemo?: (preset: string) => void;
-  onAuthSuccess?: (profile: any) => void;
+  onAuthSuccess?: (profile: Partial<StudentProfile>) => void;
   profile?: StudentProfile;
   onLogout?: () => void;
+  isAuthenticated?: boolean;
 }
 
-export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profile, onLogout }: LandingPageProps = {}) {
+export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLogout, isAuthenticated = false }: LandingPageProps = {}) {
   const { t } = useI18n();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -107,24 +107,26 @@ export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profil
   const [isActionDone, setIsActionDone] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
 
-  const isLoggedIn = Boolean(profile && profile.name && profile.name.trim().length > 0);
+  const isLoggedIn = isAuthenticated;
 
   const handleStart = (e?: React.MouseEvent) => {
     if (e) e.preventDefault();
     if (isLoggedIn) {
-      if (onNavigate) onNavigate('dashboard');
-      else if (onStart) onStart();
+      if (onStart) onStart();
+      else if (onNavigate) onNavigate('dashboard');
     } else {
-      if (onStart) {
-        onStart();
-      } else {
-        openModal('profile');
-      }
+      setAuthMode('login');
+      setIsAuthOpen(true);
     }
   };
 
   const handleNav = (screen: string, modalTab: any, e?: React.MouseEvent) => {
     if (e) e.preventDefault();
+    if (!isLoggedIn) {
+      setAuthMode('login');
+      setIsAuthOpen(true);
+      return;
+    }
     if (onNavigate) {
       onNavigate(screen);
     } else {
@@ -404,31 +406,12 @@ export function LandingPage({ onStart, onNavigate, onDemo, onAuthSuccess, profil
                 }}
               >
                 <div className="btn-text">
-                  {isLoggedIn ? t("nav.account") : t("landing.hero.cta")}
+                  {t("landing.hero.cta")}
                 </div>
               </a>
             </div>
           </div>
 
-          <div className="container flex-cc-h is--navlinks" style={{ width: 'auto', left: '50%', transform: 'translateX(-50%)' }}>
-            <div className="navlinks">
-              <a href="#diagnosis" onClick={(e) => handleNav('dashboard', 'diagnosis', e)} className="navlink _1">
-                {t("nav.diagnostics")}
-              </a>
-              <a href="#recommendations" onClick={(e) => handleNav('results', 'recommendations', e)} className="navlink _2">
-                {t("nav.recommendations")}
-              </a>
-              <a href="#compare" onClick={(e) => handleNav('compare', 'compare', e)} className="navlink _3">
-                {t("nav.compare")}
-              </a>
-              <a href="#roadmap" onClick={(e) => handleNav('roadmap', 'roadmap', e)} className="navlink _4">
-                {t("nav.roadmap")}
-              </a>
-              <a href="#action" onClick={(e) => handleNav('dashboard', 'action', e)} className="navlink last">
-                {t("nav.nextStep")}
-              </a>
-            </div>
-          </div>
         </nav>
       </div>
 

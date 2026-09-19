@@ -26,10 +26,14 @@ export type SyncState = {
 
 const STORAGE_KEY = "uniflow_state_v2";
 
-export function loadLocalState(): SyncState {
+function storageKey(userId?: string | null) {
+  return userId ? `${STORAGE_KEY}:${userId}` : STORAGE_KEY;
+}
+
+export function loadLocalState(userId?: string | null): SyncState {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem("uniflow-state");
+    const raw = window.localStorage.getItem(storageKey(userId));
     if (!raw) return {};
     return JSON.parse(raw);
   } catch (err) {
@@ -38,12 +42,39 @@ export function loadLocalState(): SyncState {
   }
 }
 
-export function saveLocalState(state: SyncState) {
+export function saveLocalState(state: SyncState, userId?: string | null) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...state, lastSyncedAt: new Date().toISOString() }));
+    window.localStorage.setItem(storageKey(userId), JSON.stringify({ ...state, lastSyncedAt: new Date().toISOString() }));
   } catch (err) {
     console.warn("Failed to save local state:", err);
+  }
+}
+
+export async function loadAccountState(userId: string): Promise<SyncState> {
+  const local = loadLocalState(userId);
+  try {
+    const { data, error } = await supabase
+      .from("uniflow_profiles")
+      .select("profile_data,target_id,completed_tasks,shortlist,applications,updated_at")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error || !data) return local;
+
+    const cloudState: SyncState = {
+      profile: data.profile_data as StudentProfile | undefined,
+      targetId: data.target_id ?? undefined,
+      completed: Array.isArray(data.completed_tasks) ? data.completed_tasks : [],
+      shortlist: Array.isArray(data.shortlist) ? data.shortlist as ShortlistItem[] : [],
+      applications: Array.isArray(data.applications) ? data.applications as ApplicationItem[] : [],
+      lastSyncedAt: data.updated_at ?? undefined,
+    };
+    saveLocalState(cloudState, userId);
+    return cloudState;
+  } catch (err) {
+    console.warn("Failed to load account state:", err);
+    return local;
   }
 }
 
@@ -52,7 +83,6 @@ export function saveLocalState(state: SyncState) {
  * Tries cloud tables first; if tables don't exist yet, falls back smoothly to localStorage.
  */
 export async function syncToCloud(state: SyncState): Promise<{ success: boolean; cloudSynced: boolean; message: string }> {
-  saveLocalState(state);
   try {
     const {
       data: { user },
@@ -61,8 +91,10 @@ export async function syncToCloud(state: SyncState): Promise<{ success: boolean;
     // Guests stay entirely in localStorage. Besides avoiding unnecessary
     // requests, this prevents anonymous users from writing shared demo rows.
     if (!user) {
-      return { success: true, cloudSynced: false, message: "Гостевой режим: сохранено локально" };
+      return { success: false, cloudSynced: false, message: "Войдите, чтобы сохранить маршрут" };
     }
+
+    saveLocalState(state, user.id);
 
     const { error } = await supabase.from("uniflow_profiles").upsert(
       {
