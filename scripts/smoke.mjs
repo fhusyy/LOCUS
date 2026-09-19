@@ -101,8 +101,11 @@ try {
     const style = getComputedStyle(element);
     return { backgroundColor: style.backgroundColor, color: style.color };
   });
-  expect(roadmapVisuals.backgroundColor === "rgb(11, 26, 48)", `Roadmap action card lost the original palette: ${roadmapVisuals.backgroundColor}`);
-  expect(roadmapVisuals.color === "rgb(255, 255, 255)", `Roadmap action text is not readable: ${roadmapVisuals.color}`);
+  expect(
+    roadmapVisuals.backgroundColor === "rgba(255, 255, 250, 0.88)",
+    `Roadmap action card lost the 782faac palette: ${roadmapVisuals.backgroundColor}`,
+  );
+  expect(roadmapVisuals.color === "rgb(4, 9, 21)", `Roadmap action text is not readable: ${roadmapVisuals.color}`);
   const progressOverflow = await page.locator(".route-progress").evaluate((element) => element.scrollWidth - element.clientWidth);
   expect(progressOverflow <= 1, `Roadmap progress text overflows its card by ${progressOverflow}px`);
   await page.screenshot({ path: `${output}/03-roadmap-contrast.png`, fullPage: false });
@@ -124,7 +127,7 @@ try {
   await mobilePage.screenshot({ path: `${output}/04-landing-mobile-en.png`, fullPage: false });
   await mobile.close();
 
-  console.log(`Smoke test passed: ${cards} recommendations, history Back, translated hints, roadmap contrast/progress, modal, and mobile overflow.`);
+  console.log(`Smoke test passed: ${cards} recommendations, history Back, translated hints, roadmap palette/progress, modal, and mobile overflow.`);
 } finally {
   await browser.close();
 }

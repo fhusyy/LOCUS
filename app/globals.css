@@ -640,20 +640,24 @@ footer > div > span { justify-self: end; }
   border-color: rgba(24, 76, 58, 0.22);
 }
 
-/* Colored cards also use card-glass for border/shadow. Keep their intended
-   dark surfaces after the generic card background above. */
-.wizard-aside.card-glass {
-  background: var(--green);
-  color: #ffffff;
-  border-color: rgba(4, 9, 21, 0.2);
+/* The 782faac palette uses light glass surfaces here. Keep the palette while
+   correcting the original white-on-light typography. */
+.wizard-aside.card-glass { color: var(--ink); }
+.wizard-aside.card-glass .aside-number { color: #6e9d45; }
+.wizard-aside.card-glass > p { color: #4c7132; }
+.wizard-aside.card-glass h2 { color: var(--ink); }
+.wizard-aside.card-glass .aside-tip {
+  color: #52645a;
+  border-top-color: rgba(82, 117, 61, 0.22);
 }
-.next-action.card-glass {
-  background: var(--green);
-  color: #ffffff;
-  border-color: rgba(4, 9, 21, 0.18);
-}
-.next-action.complete.card-glass {
-  background: #183f35;
+.wizard-aside.card-glass .aside-tip svg { color: #4c7837; }
+.next-action.card-glass { color: var(--ink); }
+.next-action.card-glass small { color: #4c7132; }
+.next-action.card-glass h2 { color: var(--ink); }
+.next-action.card-glass p { color: #4f6258; }
+.next-action.card-glass div > span {
+  background: rgba(82, 117, 61, 0.1);
+  color: #41584a;
 }
 
 .eyebrow-pill {
