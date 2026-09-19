@@ -1411,7 +1411,7 @@ function ResultsScreen({
   onViewProgram: (id: string) => void;
   onOpenWhatIf: () => void;
 }) {
-  const { t, locale } = useI18n();
+  const { t, locale, tr } = useI18n();
   const readiness = profileReadiness(profile);
   const [expandedId, setExpandedId] = useState<string | null>(matches[0]?.program.id ?? null);
   const [aiRecommendation, setAiRecommendation] = useState<string | null>(null);
@@ -1500,9 +1500,9 @@ function ResultsScreen({
         <div className="readiness-card card-glass">
           <ScoreRing value={readiness} size="large" />
           <div>
-            <span>Готовность профиля</span>
-            <strong>{readiness >= 80 ? "Сильная база поступления" : "Есть понятные точки роста"}</strong>
-            <small>Полнота данных и соответствие критериям отбора.</small>
+            <span>{tr("Готовность профиля")}</span>
+            <strong>{tr(readiness >= 80 ? "Сильная база поступления" : "Есть понятные точки роста")}</strong>
+            <small>{tr("Полнота данных и соответствие критериям отбора.")}</small>
           </div>
         </div>
       </section>
@@ -1513,8 +1513,8 @@ function ResultsScreen({
           <div className="diagnosis-title good">
             <span>↑</span>
             <div>
-              <small>Сильные сигналы</small>
-              <strong>{strengths.length} преимущества</strong>
+              <small>{tr("Сильные сигналы")}</small>
+              <strong>{strengths.length} {tr("преимущества")}</strong>
             </div>
           </div>
           <ul>
@@ -1530,8 +1530,8 @@ function ResultsScreen({
           <div className="diagnosis-title attention">
             <span>!</span>
             <div>
-              <small>Точки внимания и риски</small>
-              <strong>{constraints.length} фактора</strong>
+              <small>{tr("Точки внимания и риски")}</small>
+              <strong>{constraints.length} {tr("фактора")}</strong>
             </div>
           </div>
           <ul>
@@ -1544,19 +1544,19 @@ function ResultsScreen({
         </article>
 
         <article className="goal-card card-glass">
-          <small>Выбранные сферы ({profileInterests.length})</small>
+          <small>{tr("Выбранные сферы")} ({profileInterests.length})</small>
           <strong>
             {profileInterests.map((k) => interestLabels[k]?.title || k).join(" • ")}
           </strong>
           <span>
-            {profile.preferredCities.join(" • ")} • Набор {profile.enrollmentYear} года
+            {profile.preferredCities.join(" • ")} • {tr("Набор")} {profile.enrollmentYear}
           </span>
           <div className="goal-tags">
-            <i>{profile.onlyGrant ? "Только грант (0 ₸)" : `${formatMoney(profile.budget)} / год`}</i>
+            <i>{profile.onlyGrant ? tr("Только грант (0 ₸)") : `${formatMoney(profile.budget)} / ${tr("год")}`}</i>
             <i>{profile.language}</i>
             <i>{profile.careerFocus}</i>
-            {profile.dormitoryNeeded && <i>Общежитие</i>}
-            {profile.militaryDepartment && <i>Воен. кафедра</i>}
+            {profile.dormitoryNeeded && <i>{tr("Общежитие")}</i>}
+            {profile.militaryDepartment && <i>{tr("Воен. кафедра")}</i>}
           </div>
           <button className="button subtle small edit-btn" onClick={onEdit}>
             ✎ {t("results.edit")}
@@ -1604,7 +1604,7 @@ function ResultsScreen({
               >
                 <div className="match-rank">
                   <span>0{index + 1}</span>
-                  <b>{index === 0 ? "Лучшее совпадение" : index === 1 ? "Сильный вариант" : "Альтернатива"}</b>
+                  <b>{tr(index === 0 ? "Лучшее совпадение" : index === 1 ? "Сильный вариант" : "Альтернатива")}</b>
                   <button
                     className={`bookmark-btn ${isBookmarked ? "active" : ""}`}
                     onClick={() => onToggleShortlist(match.program.id)}
@@ -1620,9 +1620,9 @@ function ResultsScreen({
                     <div className="match-meta">
                       <span>{match.program.city}</span>
                       <i>•</i>
-                      <span>{match.program.duration}</span>
+                      <span>{tr(match.program.duration)}</span>
                       <i>•</i>
-                      <span>{match.program.language}</span>
+                      <span>{tr(match.program.language)}</span>
                     </div>
                     <h3>{match.program.university}</h3>
                     <p>
@@ -1660,11 +1660,11 @@ function ResultsScreen({
                       <strong className={match.breakdown.budget >= 70 ? "text-success" : "text-warning"}>
                         {profile.onlyGrant
                           ? match.program.scholarship
-                            ? "✓ Доступен грант МОН"
-                            : "Только платно"
+                            ? `✓ ${tr("Доступен грант МОН")}`
+                            : tr("Только платно")
                           : match.breakdown.budget === 100
-                          ? "✓ В рамках бюджета"
-                          : "Требуется грант / запас"}
+                          ? `✓ ${tr("В рамках бюджета")}`
+                          : tr("Требуется грант / запас")}
                       </strong>
                     </div>
                   </div>
@@ -1674,7 +1674,7 @@ function ResultsScreen({
                   <div className="gap-line">
                     <span>!</span>
                     <p>
-                      <strong>Точка роста:</strong> {match.gaps[0]}
+                      <strong>{tr("Точка роста:")}</strong> {match.gaps[0]}
                     </p>
                   </div>
                 )}
@@ -1741,7 +1741,7 @@ function ResultsScreen({
                       className="button subtle small"
                       onClick={() => onViewProgram(match.program.id)}
                     >
-                      Карточка вуза & Отзывы
+                      {tr("Карточка вуза & Отзывы")}
                     </button>
                   </div>
 
@@ -1779,7 +1779,7 @@ function CompareScreen({
   onTarget: (id: string) => void;
   onViewProgram: (id: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, tr } = useI18n();
   const [leftId, setLeftId] = useState(defaultLeftId || matches[0]?.program.id || "");
   const [rightId, setRightId] = useState(
     matches.find((m) => m.program.id !== defaultLeftId)?.program.id || matches[1]?.program.id || ""
@@ -1836,17 +1836,17 @@ function CompareScreen({
     <main className="dashboard container">
       <div className="section-heading-block">
         <div className="eyebrow-pill">
-          <SparkIcon size={14} /> Инструмент осознанного выбора
+          <SparkIcon size={14} /> {tr("Инструмент осознанного выбора")}
         </div>
         <h1>{t("compare.title")}</h1>
         <p className="subtitle">
-          Сопоставь требования, академическую нагрузку, финансовые затраты и перспективы трудоустройства.
+          {tr("Сопоставь требования, академическую нагрузку, финансовые затраты и перспективы трудоустройства.")}
         </p>
       </div>
 
       <section className="compare-shell card-glass">
         <div className="compare-head">
-          <div className="compare-label">Критерий оценки</div>
+          <div className="compare-label">{tr("Критерий оценки")}</div>
           {[left, right].map((match, index) => (
             <div className="compare-program" key={`${match.program.id}-${index}`}>
               <select
@@ -1876,23 +1876,23 @@ function CompareScreen({
 
         {rows.map(([label, lVal, rVal]) => (
           <div className="compare-row" key={label}>
-            <span>{label}</span>
+            <span>{tr(label)}</span>
             <strong className={lVal.includes("✓") || lVal.includes("100") ? "positive" : ""}>{lVal}</strong>
             <strong className={rVal.includes("✓") || rVal.includes("100") ? "positive" : ""}>{rVal}</strong>
           </div>
         ))}
 
         <div className="compare-verdict">
-          <span>Персональный вывод</span>
+          <span>{tr("Персональный вывод")}</span>
           <div>
-            <strong>{left.score >= right.score ? "Лидирует по общему мэтчу" : "Альтернативный вариант"}</strong>
+            <strong>{tr(left.score >= right.score ? "Лидирует по общему мэтчу" : "Альтернативный вариант")}</strong>
             <p>{left.reasons[0]}</p>
           </div>
           <div>
             <strong>
               {right.program.tuitionKzt < left.program.tuitionKzt
-                ? "Выгоднее по стоимости обучения"
-                : "Сильный альтернативный профиль"}
+                ? tr("Выгоднее по стоимости обучения")
+                : tr("Сильный альтернативный профиль")}
             </strong>
             <p>{right.reasons[0]}</p>
           </div>
@@ -1945,7 +1945,7 @@ function RoadmapScreen({
   onChangeTarget: () => void;
   onViewDetails: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, tr, locale } = useI18n();
   const tasks = buildRoadmap(profile, match);
   const next = tasks.find((task) => !completed.includes(task.id));
   const completedCount = completed.filter((id) => tasks.some((task) => task.id === id)).length;
@@ -1956,6 +1956,34 @@ function RoadmapScreen({
     exam: "✦",
     documents: "▤",
     application: "↗",
+  };
+
+  const localTask = (task: RoadmapTask) => {
+    if (locale === "ru") return task;
+    const en = locale === "en";
+    const copy: Record<string, Partial<RoadmapTask>> = {
+      shortlist: {
+        title: en ? `Finalize your shortlist and verify code ${match.program.code}` : `${match.program.code} кодын тексеріп, таңдаулы тізімді бекіт`,
+        description: en ? `Compare ${match.program.shortName} with 2–3 alternative universities in your shortlist.` : `${match.program.shortName} нұсқасын таңдаулы тізімдегі 2–3 балама ЖОО-мен салыстыр.`,
+        reason: en ? "A clear shortlist defines priority subjects and exam dates." : "Нақты тізім дайындықтағы басым пәндер мен емтихан күндерін анықтайды.",
+      },
+      documents: {
+        title: en ? "Collect the Kazakhstan applicant document package" : "ҚР талапкерінің құжаттар пакетін жинау",
+        description: en ? "Prepare your ID, certificate, UNT result, medical form, and vaccination card." : "Жеке куәлік, аттестат, ҰБТ сертификаты, медициналық анықтама және екпе картасын дайында.",
+        reason: en ? "Electronic submission requires a complete scanned document package." : "Электронды тапсыру үшін сканерленген құжаттардың толық пакеті қажет.",
+      },
+      "verify-deadlines": {
+        title: en ? "Apply for the Kazakhstan state-grant competition" : "ҚР мемлекеттік гранттар конкурсына өтінім беру",
+        description: en ? "List up to four universities or educational programs in the grant competition." : "Гранттар конкурсына 4 ЖОО немесе білім беру бағдарламасын көрсет.",
+        reason: en ? "This is the official national grant allocation competition." : "Бұл гранттарды бөлудің ресми республикалық конкурсы.",
+      },
+      apply: {
+        title: en ? `Enrollment at ${match.program.shortName}` : `${match.program.shortName} университетіне қабылдану`,
+        description: en ? "Sign the contract, submit originals, and arrange accommodation." : "Келісімшартқа қол қойып, құжаттардың түпнұсқасын тапсырып, жатақханаға орналас.",
+        reason: en ? "This is the final stage before the academic year begins." : "Бұл оқу жылы басталар алдындағы соңғы кезең.",
+      },
+    };
+    return { ...task, ...copy[task.id] };
   };
 
   return (
@@ -1985,8 +2013,8 @@ function RoadmapScreen({
           <div className="next-icon">→</div>
           <div>
             <small>{t("roadmap.next")}</small>
-            <h2>{next.title}</h2>
-            <p>{next.description}</p>
+            <h2>{localTask(next).title}</h2>
+            <p>{localTask(next).description}</p>
             <span className="action-date">🗓 {next.dateLabel}</span>
           </div>
           <button className="button light" onClick={() => onToggle(next.id)}>
@@ -1999,9 +2027,9 @@ function RoadmapScreen({
             <CheckIcon size={20} />
           </div>
           <div>
-            <small>ПОЗДРАВЛЯЕМ! МАРШРУТ ПРОЙДЕН</small>
-            <h2>Все запланированные шаги отмечены</h2>
-            <p>Следи за приказами о зачислении и проверяй личный кабинет абитуриента {match.program.shortName}.</p>
+            <small>{tr("ПОЗДРАВЛЯЕМ! МАРШРУТ ПРОЙДЕН")}</small>
+            <h2>{tr("Все запланированные шаги отмечены")}</h2>
+            <p>{tr("Следи за приказами о зачислении и проверяй личный кабинет абитуриента")} {match.program.shortName}.</p>
           </div>
         </section>
       )}
@@ -2015,10 +2043,10 @@ function RoadmapScreen({
             </div>
             <div className="legend">
               <span>
-                <i className="personal" /> Личная цель
+                <i className="personal" /> {tr("Личная цель")}
               </span>
               <span>
-                <i className="check" /> Официальная дата МОН РК
+                <i className="check" /> {tr("Официальная дата МОН РК")}
               </span>
             </div>
           </div>
@@ -2036,10 +2064,10 @@ function RoadmapScreen({
                   <div className="task-top">
                     <span className={`date-label ${task.dateType}`}>
                       {task.dateType === "personal"
-                        ? "Личная цель"
+                        ? tr("Личная цель")
                         : task.dateType === "official"
-                        ? "Официально"
-                        : "Проверить"}{" "}
+                        ? tr("Официально")
+                        : tr("Проверить")}{" "}
                       • {task.dateLabel}
                     </span>
                     <button
@@ -2048,19 +2076,19 @@ function RoadmapScreen({
                     >
                       {done ? (
                         <>
-                          <CheckIcon size={12} /> Выполнено
+                          <CheckIcon size={12} /> {tr("Выполнено")}
                         </>
                       ) : (
-                        "Отметить"
+                        tr("Отметить")
                       )}
                     </button>
                   </div>
 
-                  <h3>{task.title}</h3>
-                  <p>{task.description}</p>
+                  <h3>{localTask(task).title}</h3>
+                  <p>{localTask(task).description}</p>
                   <details>
-                    <summary>Почему это важно?</summary>
-                    <p>{task.reason}</p>
+                    <summary>{tr("Почему это важно?")}</summary>
+                    <p>{localTask(task).reason}</p>
                   </details>
                 </div>
               </article>
@@ -2070,17 +2098,17 @@ function RoadmapScreen({
 
         <aside className="route-sidebar">
           <div className="route-target card-glass">
-            <span>ЦЕЛЕВОЙ УНИВЕРСИТЕТ</span>
+            <span>{tr("ЦЕЛЕВОЙ УНИВЕРСИТЕТ")}</span>
             <span className="uni-mark large">{match.program.shortName.slice(0, 2)}</span>
             <strong>{match.program.university}</strong>
             <p>{match.program.program}</p>
 
             <div className="target-card-btn-group">
               <button className="button outline small full-width" onClick={onViewDetails}>
-                Карточка программы & Отзывы
+                {tr("Карточка программы & Отзывы")}
               </button>
               <button className="text-button" onClick={onChangeTarget}>
-                Сменить целевой вуз
+                {tr("Сменить целевой вуз")}
               </button>
             </div>
           </div>
@@ -2097,16 +2125,16 @@ function RoadmapScreen({
 
           <div className="route-stats card-glass">
             <p>
-              <span>Стоимость</span>
+              <span>{tr("Стоимость")}</span>
               <strong>{match.program.tuitionLabel}</strong>
             </p>
             <p>
-              <span>Порог ЕНТ</span>
-              <strong>{match.program.untPaid ? `${match.program.untPaid}+` : "уточнить"}</strong>
+              <span>{tr("Порог ЕНТ")}</span>
+              <strong>{match.program.untPaid ? `${match.program.untPaid}+` : tr("уточнить")}</strong>
             </p>
             <p>
-              <span>Язык</span>
-              <strong>{match.program.language}</strong>
+              <span>{tr("Язык")}</span>
+              <strong>{tr(match.program.language)}</strong>
             </p>
           </div>
         </aside>

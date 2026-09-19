@@ -38,7 +38,7 @@ export function ShortlistView({
   onViewProgram: (programId: string) => void;
   onExploreMore: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, tr } = useI18n();
   const [activeTab, setActiveTab] = useState<"shortlist" | "tracker">("shortlist");
 
   // Map matches to shortlisted programs
@@ -71,13 +71,13 @@ export function ShortlistView({
             className={`tab-pill-btn ${activeTab === "shortlist" ? "active" : ""}`}
             onClick={() => setActiveTab("shortlist")}
           >
-            Портфель программ ({shortlist.length})
+            {tr("Портфель программ")} ({shortlist.length})
           </button>
           <button
             className={`tab-pill-btn ${activeTab === "tracker" ? "active" : ""}`}
             onClick={() => setActiveTab("tracker")}
           >
-            Трекер статуса заявок ({shortlist.length})
+            {tr("Трекер статуса заявок")} ({shortlist.length})
           </button>
         </div>
       </div>
@@ -100,8 +100,8 @@ export function ShortlistView({
           <section className="portfolio-group">
             <div className="group-heading">
               <span className="dot-indicator target" />
-              <h3>Целевые программы (Target) — {targetGroup.length}</h3>
-              <p>Оптимальное соотношение баллов и желаемого направления.</p>
+              <h3>{tr("Целевые программы (Target)")} — {targetGroup.length}</h3>
+              <p>{tr("Оптимальное соотношение баллов и желаемого направления.")}</p>
             </div>
             {targetGroup.length > 0 ? (
               <div className="portfolio-grid">
@@ -127,8 +127,8 @@ export function ShortlistView({
           <section className="portfolio-group">
             <div className="group-heading">
               <span className="dot-indicator reach" />
-              <h3>Амбициозные траектории (Reach) — {reachGroup.length}</h3>
-              <p>Высокая конкуренция за грант или повышенные требования к языку/ЕНТ.</p>
+              <h3>{tr("Амбициозные траектории (Reach)")} — {reachGroup.length}</h3>
+              <p>{tr("Высокая конкуренция за грант или повышенные требования к языку/ЕНТ.")}</p>
             </div>
             {reachGroup.length > 0 ? (
               <div className="portfolio-grid">
@@ -154,8 +154,8 @@ export function ShortlistView({
           <section className="portfolio-group">
             <div className="group-heading">
               <span className="dot-indicator safety" />
-              <h3>Надёжные варианты (Safety) — {safetyGroup.length}</h3>
-              <p>Твой профиль уже сейчас полностью соответствует или превосходит планку поступления.</p>
+              <h3>{tr("Надёжные варианты (Safety)")} — {safetyGroup.length}</h3>
+              <p>{tr("Твой профиль уже сейчас полностью соответствует или превосходит планку поступления.")}</p>
             </div>
             {safetyGroup.length > 0 ? (
               <div className="portfolio-grid">
@@ -268,6 +268,7 @@ function ShortlistCard({
   onSetTarget: () => void;
   onView: () => void;
 }) {
+  const { tr } = useI18n();
   return (
     <div className={`portfolio-card card-glass ${isTarget ? "is-target" : ""}`}>
       <div className="card-top-row">
@@ -293,7 +294,7 @@ function ShortlistCard({
 
       {/* Category selector */}
       <div className="cat-selector-row">
-        <label>Категория:</label>
+        <label>{tr("Категория:")}</label>
         <select
           value={item.category}
           onChange={(e) => onChangeCat(e.target.value as ShortlistItem["category"])}
@@ -306,15 +307,15 @@ function ShortlistCard({
 
       <div className="card-bottom-actions">
         <button className="button outline small" onClick={onView}>
-          Подробнее
+          {tr("Подробнее")}
         </button>
         {isTarget ? (
           <span className="target-active-pill">
-            <CheckIcon size={14} /> Главная цель
+            <CheckIcon size={14} /> {tr("Главная цель")}
           </span>
         ) : (
           <button className="button primary small" onClick={onSetTarget}>
-            Выбрать целью
+            {tr("Выбрать целью")}
           </button>
         )}
       </div>

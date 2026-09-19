@@ -26,7 +26,7 @@ export function DashboardView({
   onViewProgram: (programId: string) => void;
   onEditProfile: () => void;
 }) {
-  const { t } = useI18n();
+  const { t, tr } = useI18n();
   const readiness = profileReadiness(profile);
   const tasks = buildRoadmap(profile, targetMatch);
   const nextTask = tasks.find((t) => !completedTasks.includes(t.id));
@@ -47,23 +47,22 @@ export function DashboardView({
               {t("dashboard.hello", { name: profile.name || "future student" })}
             </h1>
             <p className="dash-sub">
-              Твой персональный вектор: <b>{targetMatch.program.university}</b> ({targetMatch.program.program}). Мы
-              отслеживаем твои шаги до подачи документов.
+              {tr("Твой персональный вектор:")} <b>{targetMatch.program.university}</b> ({targetMatch.program.program}). {tr("Мы отслеживаем твои шаги до подачи документов.")}
             </p>
           </div>
 
           <div className="dash-stat-badges">
             <div className="stat-badge">
               <span className="stat-num">{progressPercent}%</span>
-              <span className="stat-label">Готовность плана</span>
+              <span className="stat-label">{tr("Готовность плана")}</span>
             </div>
             <div className="stat-badge">
               <span className="stat-num">{shortlist.length}</span>
-              <span className="stat-label">В шорт-листе</span>
+              <span className="stat-label">{tr("В шорт-листе")}</span>
             </div>
             <div className="stat-badge">
               <span className="stat-num">{targetMatch.score}%</span>
-              <span className="stat-label">Совместимость</span>
+              <span className="stat-label">{tr("Совместимость")}</span>
             </div>
           </div>
         </div>
@@ -71,7 +70,7 @@ export function DashboardView({
         {/* Next Action Banner */}
         {nextTask ? (
           <div className="dash-next-action-card">
-            <div className="action-tag">СЛЕДУЮЩИЙ ШАГ ПОДГОТОВКИ</div>
+            <div className="action-tag">{tr("Следующий шаг подготовки")}</div>
             <div className="action-main">
               <div className="action-info">
                 <h3>{nextTask.title}</h3>
@@ -79,7 +78,7 @@ export function DashboardView({
                 <span className="action-deadline">🗓 {nextTask.dateLabel}</span>
               </div>
               <button className="button primary" onClick={() => onToggleTask(nextTask.id)}>
-                <CheckIcon size={16} /> Отметить выполненным
+                <CheckIcon size={16} /> {tr("Отметить выполненным")}
               </button>
             </div>
           </div>
@@ -103,9 +102,9 @@ export function DashboardView({
       <div className="dash-split-grid">
         <div className="card-glass target-highlight-card">
           <div className="section-head-sm">
-            <span>ЦЕЛЕВАЯ ПРОГРАММА</span>
+            <span>{tr("ЦЕЛЕВАЯ ПРОГРАММА")}</span>
             <button className="text-button" onClick={() => onNavigate("roadmap")}>
-              Вся дорожная карта <Chevron size={14} />
+              {tr("Вся дорожная карта")} <Chevron size={14} />
             </button>
           </div>
 
@@ -128,13 +127,13 @@ export function DashboardView({
               className="button outline small"
               onClick={() => onViewProgram(targetMatch.program.id)}
             >
-              Подробный профиль вуза
+              {tr("Подробный профиль вуза")}
             </button>
             <button
               className="button subtle small"
               onClick={() => onNavigate("what-if")}
             >
-              <SlidersIcon size={14} /> Что если изменить баллы?
+              <SlidersIcon size={14} /> {tr("Что если изменить баллы?")}
             </button>
           </div>
         </div>
@@ -142,9 +141,9 @@ export function DashboardView({
         {/* Readiness Profile Quick Summary */}
         <div className="card-glass readiness-summary-card">
           <div className="section-head-sm">
-            <span>ДИАГНОСТИКА ПРОФИЛЯ</span>
+            <span>{tr("ДИАГНОСТИКА ПРОФИЛЯ")}</span>
             <button className="text-button" onClick={onEditProfile}>
-              ✎ Изменить
+              ✎ {tr("Изменить")}
             </button>
           </div>
 
@@ -162,13 +161,13 @@ export function DashboardView({
 
           <div className="quick-nav-tiles">
             <button className="quick-tile" onClick={() => onNavigate("results")}>
-              Топ рекомендации ({topMatches.length})
+              {tr("Топ рекомендации")} ({topMatches.length})
             </button>
             <button className="quick-tile" onClick={() => onNavigate("explore")}>
-              Каталог программ
+              {tr("Каталог программ")}
             </button>
             <button className="quick-tile" onClick={() => onNavigate("compare")}>
-              Сравнить вузы
+              {tr("Сравнить вузы")}
             </button>
             <button className="quick-tile" onClick={() => onNavigate("shortlist")}>
               Шорт-лист ({shortlist.length})
@@ -185,7 +184,7 @@ export function DashboardView({
             <p>Диверсифицированный топ лучших университетов Казахстана под твои параметры.</p>
           </div>
           <button className="button outline small" onClick={() => onNavigate("results")}>
-            Смотреть полную диагностику <Chevron size={14} />
+            {tr("Смотреть полную диагностику")} <Chevron size={14} />
           </button>
         </div>
 
@@ -213,7 +212,7 @@ export function DashboardView({
                   className="button subtle small"
                   onClick={() => onViewProgram(match.program.id)}
                 >
-                  Подробнее
+                  {tr("Подробнее")}
                 </button>
               </div>
             </div>

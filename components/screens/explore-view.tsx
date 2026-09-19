@@ -21,7 +21,7 @@ export function ExploreView({
   onViewProgram: (programId: string) => void;
   onCompareProgram: (programId: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, tr } = useI18n();
   const [search, setSearch] = useState("");
   const [selectedCity, setSelectedCity] = useState<string>("all");
   const [selectedInterest, setSelectedInterest] = useState<string>("all");
@@ -96,7 +96,7 @@ export function ExploreView({
           <SearchIcon size={18} />
           <input
             type="text"
-            placeholder="Поиск по вузу, специальности, шифру (напр. B057, ИИ, КБТУ, Алматы, GameLab)..."
+            placeholder={tr("Поиск по вузу, специальности, шифру (напр. B057, ИИ, КБТУ, Алматы, GameLab)...")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="explore-search-input"
@@ -111,9 +111,9 @@ export function ExploreView({
         <div className="filters-row">
           {/* City */}
           <div className="filter-item">
-            <label>Город кампуса:</label>
+            <label>{tr("Город кампуса:")}</label>
             <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}>
-              <option value="all">Все города РК</option>
+              <option value="all">{tr("Все города РК")}</option>
               <option value="Астана">Астана</option>
               <option value="Алматы">Алматы</option>
               <option value="Каскелен">Каскелен (SDU)</option>
@@ -125,9 +125,9 @@ export function ExploreView({
 
           {/* Interest */}
           <div className="filter-item">
-            <label>Направление:</label>
+            <label>{tr("Направление:")}</label>
             <select value={selectedInterest} onChange={(e) => setSelectedInterest(e.target.value)}>
-              <option value="all">Все специальности</option>
+              <option value="all">{tr("Все специальности")}</option>
               <optgroup label="IT & Искусственный интеллект">
                 <option value="computer-science">Computer Science (Компьютерные науки)</option>
                 <option value="software-engineering">Software Engineering (Разработка ПО)</option>
@@ -169,9 +169,9 @@ export function ExploreView({
 
           {/* UNT Combination */}
           <div className="filter-item">
-            <label>Предметы ЕНТ:</label>
+            <label>{tr("Предметы ЕНТ:")}</label>
             <select value={selectedComb} onChange={(e) => setSelectedComb(e.target.value)}>
-              <option value="all">Любая комбинация</option>
+              <option value="all">{tr("Любая комбинация")}</option>
               <option value="Математика + Информатика">Математика + Информатика (IT/ИИ)</option>
               <option value="Математика + Физика">Математика + Физика (Инженерия/Архитектура)</option>
               <option value="Математика + География">Математика + География (Бизнес/Финансы)</option>
@@ -184,9 +184,9 @@ export function ExploreView({
 
           {/* Budget */}
           <div className="filter-item">
-            <label>Бюджет до:</label>
+            <label>{tr("Бюджет до:")}</label>
             <select value={maxBudget} onChange={(e) => setMaxBudget(Number(e.target.value))}>
-              <option value={0}>Любая стоимость</option>
+              <option value={0}>{tr("Любая стоимость")}</option>
               <option value={1500000}>до 1.5 млн ₸ (доступные)</option>
               <option value={2500000}>до 2.5 млн ₸ (средний сегмент)</option>
               <option value={3500000}>до 3.5 млн ₸ (премиум)</option>
@@ -195,9 +195,9 @@ export function ExploreView({
 
           {/* Language */}
           <div className="filter-item">
-            <label>Язык обучения:</label>
+            <label>{tr("Язык обучения:")}</label>
             <select value={selectedLanguage} onChange={(e) => setSelectedLanguage(e.target.value)}>
-              <option value="all">Любой язык</option>
+              <option value="all">{tr("Любой язык")}</option>
               <option value="Казахский / русский">Казахский / русский</option>
               <option value="Английский">Английский</option>
               <option value="Смешанный">Смешанный</option>
@@ -206,9 +206,9 @@ export function ExploreView({
 
           {/* Sort */}
           <div className="filter-item sort-item">
-            <label>Сортировка:</label>
+            <label>{tr("Сортировка:")}</label>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
-              <option value="fit">По совпадению с профилем</option>
+              <option value="fit">{tr("По совпадению с профилем")}</option>
               <option value="price-asc">Сначала доступные по цене</option>
               <option value="price-desc">Сначала дорогие</option>
               <option value="unt">По порогу ЕНТ</option>
@@ -218,11 +218,11 @@ export function ExploreView({
 
         <div className="filter-meta-bar">
           <span className="results-count">
-            Найдено программ: <b>{filteredMatches.length}</b> из {matches.length}
+            {tr("Найдено программ:")} <b>{filteredMatches.length}</b> {tr("из")} {matches.length}
           </span>
           {(search || selectedCity !== "all" || selectedInterest !== "all" || selectedComb !== "all" || maxBudget > 0 || selectedLanguage !== "all") && (
             <button className="text-button reset-filter-btn" onClick={resetFilters}>
-              Сбросить фильтры
+              {tr("Сбросить фильтры")}
             </button>
           )}
         </div>
@@ -253,7 +253,7 @@ export function ExploreView({
 
                 <div className="explore-card-content">
                   <div className="card-location">
-                    <MapPinIcon size={12} /> {match.program.city} • {match.program.duration} • <span className="lang-pill">{match.program.language}</span>
+                    <MapPinIcon size={12} /> {match.program.city} • {tr(match.program.duration)} • <span className="lang-pill">{tr(match.program.language)}</span>
                   </div>
                   <h3 className="card-uni-title">{match.program.university}</h3>
                   <h4 className="card-program-title">{match.program.program}</h4>
@@ -281,14 +281,14 @@ export function ExploreView({
 
                   <div className="card-criteria-preview">
                     <span>
-                      Порог ЕНТ: <b>{match.program.untPaid ? `${match.program.untPaid}+` : "уточнить"}</b>
+                      {tr("Порог ЕНТ:")} <b>{match.program.untPaid ? `${match.program.untPaid}+` : tr("уточнить")}</b>
                     </span>
                     <span className={isAffordable ? "text-success" : "text-warning"}>
                       {profile.onlyGrant
                         ? "✓ Есть гранты МОН"
                         : isAffordable
-                        ? "✓ В бюджете"
-                        : "! Выше лимита"}
+                        ? `✓ ${tr("В бюджете")}`
+                        : `! ${tr("Выше лимита")}`}
                     </span>
                   </div>
                 </div>
@@ -298,14 +298,14 @@ export function ExploreView({
                     className="button outline small full-width"
                     onClick={() => onViewProgram(match.program.id)}
                   >
-                    Подробнее о вузе
+                    {tr("Подробнее о вузе")}
                   </button>
                   <button
                     className="button subtle small"
                     onClick={() => onCompareProgram(match.program.id)}
                     title="Сравнить эту программу"
                   >
-                    Сравнить
+                    {tr("Сравнить")}
                   </button>
                 </div>
               </div>

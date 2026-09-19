@@ -96,7 +96,7 @@ export interface LandingPageProps {
 }
 
 export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLogout, isAuthenticated = false }: LandingPageProps = {}) {
-  const { t } = useI18n();
+  const { t, tr } = useI18n();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -485,7 +485,7 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
           <section className="section is--project">
             <div className="container">
               <div className="rel">
-                <div className="recent-project-label">РЕАЛЬНЫЙ МАРШРУТ ПОСТУПЛЕНИЯ</div>
+                <div className="recent-project-label">{tr("РЕАЛЬНЫЙ МАРШРУТ ПОСТУПЛЕНИЯ")}</div>
                 <a
                   href="#case"
                   onClick={(e) => handleNav('results', 'recommendations', e)}
@@ -510,7 +510,7 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
                     className="project-title w-inline-block"
                     style={{ textDecoration: 'none' }}
                   >
-                    <h2>Траектория Software Engineering</h2>
+                    <h2>{tr("Траектория Software Engineering")}</h2>
                   </a>
                 </div>
                 <div className="div-hide is--always">
@@ -527,17 +527,17 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
             <div className="container flex-v">
               <div>
                 <div className="div-hide hanging-text">
-                  <h2>Маршрут, который объясняет,</h2>
+                  <h2>{tr("Маршрут, который объясняет,")}</h2>
                 </div>
                 <div className="div-hide hanging-text">
-                  <h2>где твоё место и почему,<br /></h2>
+                  <h2>{tr("где твоё место и почему,")}<br /></h2>
                 </div>
                 <div className="div-hide hanging-text">
-                  <h2>и что делать прямо сейчас</h2>
+                  <h2>{tr("и что делать прямо сейчас")}</h2>
                 </div>
                 <div className="spacer-1em"></div>
                 <p style={{ opacity: 1, fontSize: '18px', lineHeight: 1.7, color: '#94a3b8', maxWidth: '700px' }}>
-                  Не очередной перегруженный справочник вузов со старыми таблицами. UniFlow анализирует твои баллы ЕНТ, GPA, языковые сертификаты и финансовый лимит, рассчитывает объективную совместимость и ведёт за руку до оффера.
+                  {tr("Не очередной перегруженный справочник вузов со старыми таблицами. UniFlow анализирует твои баллы ЕНТ, GPA, языковые сертификаты и финансовый лимит, рассчитывает объективную совместимость и ведёт за руку до оффера.")}
                 </p>
               </div>
               <div className="img-parent uniflow-circle">
@@ -552,13 +552,13 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
               <div className="h-services-bg">
                 <div className="half">
                   <div className="div-hide hanging-text">
-                    <h2>Честный AI-подбор,</h2>
+                    <h2>{tr("Честный AI-подбор,")}</h2>
                   </div>
                   <div className="div-hide hanging-text">
-                    <h2>который раскладывает всё</h2>
+                    <h2>{tr("который раскладывает всё")}</h2>
                   </div>
                   <div className="div-hide hanging-text">
-                    <h2>по полочкам</h2>
+                    <h2>{tr("по полочкам")}</h2>
                   </div>
                   <div className="spacer-1em"></div>
                   <p style={{ opacity: 1, color: '#94a3b8', fontSize: '16px', lineHeight: 1.6 }}>
@@ -622,13 +622,13 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
             <div className="container flex-v">
               <div className="auto">
                 <div className="div-hide">
-                  <h2>Помогаем каждому абитуриенту</h2>
+                  <h2>{tr("Помогаем каждому абитуриенту")}</h2>
                 </div>
                 <div className="div-hide hanging-text">
-                  <h2>превратить старания и мечты<br /></h2>
+                  <h2>{tr("превратить старания и мечты")}<br /></h2>
                 </div>
                 <div className="div-hide">
-                  <h2>в гарантированное поступление</h2>
+                  <h2>{tr("в гарантированное поступление")}</h2>
                 </div>
                 <div className="spacer-1em"></div>
                 <p style={{ opacity: 1, fontSize: '18px', lineHeight: 1.7, color: '#94a3b8', maxWidth: '640px' }}>
@@ -694,17 +694,17 @@ export function LandingPage({ onStart, onNavigate, onAuthSuccess, profile, onLog
               <div className="cta-heading-wrapper" style={{ alignItems: 'center', alignSelf: 'center', textAlign: 'center', width: '100%' }}>
                 <div className="cta-heading-line-wrapper top" style={{ marginLeft: 0, alignSelf: 'center', textAlign: 'center' }}>
                   <div className="div-hide is--always">
-                    <h1 className="super-text cta" style={{ textAlign: 'center' }}>Построй свой персональный</h1>
+                    <h1 className="super-text cta" style={{ textAlign: 'center' }}>{tr("Построй свой персональный")}</h1>
                   </div>
                 </div>
                 <div className="cta-heading-line-wrapper" style={{ marginLeft: 0, alignSelf: 'center', textAlign: 'center' }}>
                   <div className="div-hide inline is--always">
-                    <h1 className="super-text cta" style={{ textAlign: 'center' }}>маршрут поступления сегодня</h1>
+                    <h1 className="super-text cta" style={{ textAlign: 'center' }}>{tr("маршрут поступления сегодня")}</h1>
                   </div>
                 </div>
               </div>
               <p className="text-center" style={{ opacity: 1, fontSize: '18px', color: '#4a5768', maxWidth: '600px', margin: '16px auto 28px' }}>
-                Ответь на 7 коротких вопросов и получи готовую стратегию поступления уже через 3 минуты!
+                {tr("Ответь на 7 коротких вопросов и получи готовую стратегию поступления уже через 3 минуты!")}
               </p>
               <a
                 href="#start"
